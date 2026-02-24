@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1.111B Class Domain Generator (Local Test)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #DE3C2B;
+            --primary-hover: #ff5240;
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --gold: #fbbf24;
+            --success: #10b981;
+            --disabled: #475569;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .header { text-align: center; margin-bottom: 30px; }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-weight: 800;
+            font-size: 28px;
+            background: linear-gradient(to right, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p { margin: 0; color: var(--text-muted); font-size: 15px; }
+
+        .generate-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            background: linear-gradient(135deg, var(--primary), #b92b1c);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 14px rgba(222, 60, 43, 0.4);
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(222, 60, 43, 0.6);
+        }
+        
+        .generate-btn:disabled {
+            background: var(--disabled);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin: 24px 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .domain-list { display: flex; flex-direction: column; gap: 12px; }
+
+        .domain-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .domain-item.premium {
+            background: rgba(251, 191, 36, 0.05);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+
+        .domain-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(4px);
+        }
+
+        .domain-info { display: flex; align-items: center; gap: 12px; }
+
+        .domain-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 1px;
+        }
+
+        .domain-item.premium .domain-name { color: var(--gold); }
+        .ext { color: var(--text-muted); font-weight: 400; }
+
+        .badge {
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--gold);
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .action-btn {
+            background-color: transparent;
+            color: white;
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .action-btn.buy { border-color: var(--success); color: var(--success); }
+        .action-btn.buy:hover { background-color: var(--success); color: #0f172a; }
+        
+        .action-btn.taken {
+            border-color: transparent;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            cursor: not-allowed;
+        }
+
+        .action-btn svg { width: 16px; height: 16px; }
+        .loading-text { color: var(--text-muted); text-align: center; padding: 20px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>1.111B Class Generator</h2>
+        <p>Grab a 6-9 digit numeric .xyz domain for $0.99/yr.</p>
+    </div>
+
+    <button class="generate-btn" id="generate-btn" onclick="generateAndCheck()">✨ Generate & Check Availability</button>
+    
+    <div class="section-title">🔥 Premium Patterns</div>
+    <div class="domain-list" id="premium-list"></div>
+
+    <div class="section-title">🎲 Random Picks</div>
+    <div class="domain-list" id="random-list"></div>
+</div>
+
+<script>
+    const AFFILIATE_ID = "YOUR_AFF_ID";
+
+    function generatePremiumNumber() {
+        const patterns = ['palindrome', 'repeating', 'trailingZeros'];
+        const choice = patterns[Math.floor(Math.random() * patterns.length)];
+        if (choice === 'palindrome') {
+            const half = Math.floor(Math.random() * 900) + 100;
+            return half.toString() + half.toString().split('').reverse().join('');
+        } else if (choice === 'repeating') {
+            const block = Math.floor(Math.random() * 900) + 100;
+            return block.toString() + block.toString();
+        } else {
+            const prefix = Math.floor(Math.random() * 900) + 100;
+            return prefix.toString() + "000";
+        }
+    }
+
+    function generateRandomNumber() {
+        const length = Math.floor(Math.random() * 4) + 6;
+        let num = "";
+        for (let j = 0; j < length; j++) num += Math.floor(Math.random() * 10);
+        return num;
+    }
+
+    function createDomainHTML(domain, isPremium, isAvailable) {
+        const fullDomain = `${domain}.xyz`;
+        const affiliateLink = `https://www.namecheap.com/domains/registration/results/?domain=${fullDomain}&aff=${AFFILIATE_ID}`;
+        const premiumClass = isPremium ? ' premium' : '';
+        const badgeHTML = isPremium ? `<span class="badge">Rare</span>` : '';
+
+        let buttonHTML = '';
+        if (isAvailable) {
+            buttonHTML = `
+                <a href="${affiliateLink}" target="_blank" class="action-btn buy">
+                    Buy $0.99
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                </a>`;
+        } else {
+            buttonHTML = `<div class="action-btn taken">Taken</div>`;
+        }
+
+        return `
+            <div class="domain-item${premiumClass}">
+                <div class="domain-info">
+                    <div class="domain-name">${domain}<span class="ext">.xyz</span></div>
+                    ${badgeHTML}
+                </div>
+                ${buttonHTML}
+            </div>
+        `;
+    }
+
+    // --- MOCK BACKEND FUNCTION FOR LOCAL TESTING ---
+    function mockBackendCheck(domains) {
+        return new Promise((resolve) => {
+            // Simulate a 1.5 second network delay
+            setTimeout(() => {
+                const results = domains.map(domain => ({
+                    domain: domain,
+                    // Simulate a 70% chance the domain is available
+                    available: Math.random() > 0.3 
+                }));
+                resolve({ results: results });
+            }, 1500);
+        });
+    }
+
+    async function generateAndCheck() {
+        const btn = document.getElementById('generate-btn');
+        const premiumList = document.getElementById('premium-list');
+        const randomList = document.getElementById('random-list');
+        
+        // 1. Set Loading State
+        btn.disabled = true;
+        btn.innerText = "⏳ Checking availability...";
+        premiumList.innerHTML = '<div class="loading-text">Contacting Registry...</div>';
+        randomList.innerHTML = '<div class="loading-text">Contacting Registry...</div>';
+
+        // 2. Generate the numbers
+        const premiumDomains = [];
+        const randomDomains = [];
+        for (let i = 0; i < 3; i++) premiumDomains.push(generatePremiumNumber());
+        for (let i = 0; i < 5; i++) randomDomains.push(generateRandomNumber());
+        
+        const allDomainsToCheck = [...premiumDomains, ...randomDomains];
+
+        try {
+            // 3. USE THE MOCK BACKEND INSTEAD OF FETCHING FROM SCALEWAY
+            const data = await mockBackendCheck(allDomainsToCheck);
+            const results = data.results; 
+
+            // 4. Update the UI with the results
+            premiumList.innerHTML = "";
+            randomList.innerHTML = "";
+
+            results.forEach(item => {
+                const isPremium = premiumDomains.includes(item.domain);
+                const html = createDomainHTML(item.domain, isPremium, item.available);
+                
+                if (isPremium) {
+                    premiumList.innerHTML += html;
+                } else {
+                    randomList.innerHTML += html;
+                }
+            });
+
+        } catch (error) {
+            console.error(error);
+            premiumList.innerHTML = '<div class="loading-text" style="color: #ef4444;">Error checking domains.</div>';
+            randomList.innerHTML = '';
+        }
+
+        // 5. Reset button
+        btn.disabled = false;
+        btn.innerText = "✨ Generate & Check Availability";
+    }
+
+    // Run once on load
+    window.onload = generateAndCheck;
+</script>
+
+</body>
+</html>
