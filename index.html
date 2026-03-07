@@ -280,7 +280,6 @@
         return { domain: candidate.toString(), type: 'Prime' };
     }
 
-    // Updated to accept a forced style so we can refresh the EXACT same sub-category
     function generateRepeating(forceStyle = null) {
         const styles = ['solid', 'triples', 'repeatSequence'];
         const style = forceStyle || styles[Math.floor(Math.random() * styles.length)];
@@ -359,7 +358,7 @@
         return `
             <div class="domain-item${premiumClass}" id="${id}">
                 <div class="domain-info">
-                    <button class="refresh-btn" onclick="refreshRow('${id}', '${domainObj.type}', ${isPremium})" title="Regenerate this line">
+                    <button class="refresh-btn" onclick="refreshRow('${id}', '${domainObj.type}', ${isPremium})" title="Hunt for an available domain">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                     <div class="domain-name">${domainObj.domain}<span class="ext">.xyz</span></div>
@@ -370,35 +369,47 @@
         `;
     }
 
-    // --- REFRESH SINGLE ROW LOGIC ---
+    // --- AUTO-HUNT (REFRESH UNTIL AVAILABLE) LOGIC ---
     async function refreshRow(id, type, isPremium) {
         const rowElement = document.getElementById(id);
         if (!rowElement) return;
 
-        // 1. Find elements to set loading states
         const refreshBtn = rowElement.querySelector('.refresh-btn');
         const actionBtn = rowElement.querySelector('.action-btn');
         const domainNameDiv = rowElement.querySelector('.domain-name');
 
-        // 2. Set UI to Loading
+        // 1. Lock the UI for this row
         refreshBtn.disabled = true;
         refreshBtn.classList.add('spinning');
-        actionBtn.outerHTML = `<div class="action-btn taken" style="background: transparent;"><span class="checking-text">⏳ Checking...</span></div>`;
+        actionBtn.outerHTML = `<div class="action-btn taken" style="background: transparent;"><span class="checking-text">⏳ Hunting...</span></div>`;
 
-        // 3. Generate new math based on the EXACT type clicked
         const generatorFn = generatorMap[type];
-        const newDomainObj = generatorFn();
+        let isAvailable = false;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 12; // The Kill Switch
+        let currentDomainObj;
 
-        // 4. Immediately update text so user feels response
-        domainNameDiv.innerHTML = `${newDomainObj.domain}<span class="ext">.xyz</span>`;
+        // 2. The Hunting Loop
+        while (!isAvailable && attempts < MAX_ATTEMPTS) {
+            attempts++;
+            currentDomainObj = generatorFn();
+            
+            // Instantly update the UI so the user sees it rapidly flipping through numbers
+            domainNameDiv.innerHTML = `${currentDomainObj.domain}<span class="ext">.xyz</span> <span style="font-size: 10px; color: #64748b;">(try ${attempts})</span>`;
 
-        // 5. Query Registry & Update UI
-        const isAvailable = await checkDomainAvailability(newDomainObj.domain);
-        
-        // Grab row again in case DOM was altered
+            // Check availability
+            isAvailable = await checkDomainAvailability(currentDomainObj.domain);
+
+            // If it's taken, wait 500ms before looping again to protect your IP
+            if (!isAvailable && attempts < MAX_ATTEMPTS) {
+                await sleep(500); 
+            }
+        }
+
+        // 3. Loop finished. Update UI with the final result
         const updatedRow = document.getElementById(id); 
         if(updatedRow) {
-            updatedRow.outerHTML = createFinalDomainHTML(newDomainObj, isPremium, isAvailable, id);
+            updatedRow.outerHTML = createFinalDomainHTML(currentDomainObj, isPremium, isAvailable, id);
         }
     }
 
