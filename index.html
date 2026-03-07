@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1.111B Class Domain Generator (Local Test)</title>
+    <title>1.111B Class Domain Generator</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     
     <style>
@@ -118,7 +118,7 @@
             transform: translateX(4px);
         }
 
-        .domain-info { display: flex; align-items: center; gap: 12px; }
+        .domain-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
         .domain-name {
             font-family: 'JetBrains Mono', monospace;
@@ -132,14 +132,22 @@
         .ext { color: var(--text-muted); font-weight: 400; }
 
         .badge {
-            background: rgba(251, 191, 36, 0.2);
-            color: var(--gold);
             font-size: 10px;
             font-weight: 800;
             padding: 4px 8px;
             border-radius: 6px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+        
+        /* Custom Premium Badges */
+        .badge.lucky { color: #f43f5e; background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.3); }
+        .badge.prime { color: #a855f7; background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.3); }
+        .badge.sequential { color: #3b82f6; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge.solid { color: #ef4444; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge.triples { color: #10b981; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge.repeater { color: #f97316; background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.3); }
+        .badge.palindrome { color: #06b6d4; background: rgba(6, 182, 212, 0.2); border: 1px solid rgba(6, 182, 212, 0.3); }
 
         .action-btn {
             background-color: transparent;
@@ -168,7 +176,37 @@
         }
 
         .action-btn svg { width: 16px; height: 16px; }
-        .loading-text { color: var(--text-muted); text-align: center; padding: 20px; font-style: italic; }
+
+        /* Refresh Button Styles */
+        .refresh-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+
+        .refresh-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .refresh-btn svg { width: 16px; height: 16px; transition: transform 0.3s ease; }
+        .refresh-btn:hover:not(:disabled) svg { transform: rotate(90deg); }
+        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .checking-text { display: inline-block; animation: pulse 1.5s infinite; font-style: italic; }
     </style>
 </head>
 <body>
@@ -176,7 +214,7 @@
 <div class="container">
     <div class="header">
         <h2>1.111B Class Generator</h2>
-        <p>Grab a 6-9 digit numeric .xyz domain for $0.99/yr.</p>
+        <p>Discover & register rare numeric .xyz domains.</p>
     </div>
 
     <button class="generate-btn" id="generate-btn" onclick="generateAndCheck()">✨ Generate & Check Availability</button>
@@ -189,51 +227,142 @@
 </div>
 
 <script>
-    const AFFILIATE_ID = "YOUR_AFF_ID";
+    // --- PREMIUM GENERATOR LOGIC ---
+    function getLength() { return Math.floor(Math.random() * 4) + 6; } 
 
-    function generatePremiumNumber() {
-        const patterns = ['palindrome', 'repeating', 'trailingZeros'];
-        const choice = patterns[Math.floor(Math.random() * patterns.length)];
-        if (choice === 'palindrome') {
-            const half = Math.floor(Math.random() * 900) + 100;
-            return half.toString() + half.toString().split('').reverse().join('');
-        } else if (choice === 'repeating') {
-            const block = Math.floor(Math.random() * 900) + 100;
-            return block.toString() + block.toString();
+    function generateSequential() {
+        const length = getLength();
+        const start = Math.floor(Math.random() * 9) + 1; 
+        let num = "";
+        const isAscending = Math.random() > 0.5;
+        for(let i = 0; i < length; i++) {
+            let digit = isAscending ? (start + i) % 10 : (start - i) % 10;
+            if (digit < 0) digit += 10; 
+            num += digit;
+        }
+        return { domain: num, type: 'Sequential' };
+    }
+
+    function generatePalindrome() {
+        const length = getLength();
+        const halfLen = Math.floor(length / 2);
+        let half = "";
+        for(let i=0; i < halfLen; i++) half += Math.floor(Math.random() * 10);
+        
+        if (length % 2 === 0) {
+            return { domain: half + half.split('').reverse().join(''), type: 'Palindrome' };
         } else {
-            const prefix = Math.floor(Math.random() * 900) + 100;
-            return prefix.toString() + "000";
+            const mid = Math.floor(Math.random() * 10);
+            return { domain: half + mid + half.split('').reverse().join(''), type: 'Palindrome' };
+        }
+    }
+
+    function generateLucky() {
+        const length = getLength();
+        const luckyDigits = ['6', '8', '9']; 
+        let num = "";
+        for(let i=0; i < length; i++) num += luckyDigits[Math.floor(Math.random() * luckyDigits.length)];
+        return { domain: num, type: 'Lucky' };
+    }
+
+    function isPrime(num) {
+        for(let i = 2, s = Math.sqrt(num); i <= s; i++) if(num % i === 0) return false;
+        return num > 1;
+    }
+
+    function generatePrime() {
+        const length = getLength();
+        let min = Math.pow(10, length - 1);
+        let max = Math.pow(10, length) - 1;
+        let candidate = Math.floor(Math.random() * (max - min + 1)) + min;
+        if (candidate % 2 === 0) candidate++;
+        while (!isPrime(candidate)) candidate += 2;
+        return { domain: candidate.toString(), type: 'Prime' };
+    }
+
+    // Updated to accept a forced style so we can refresh the EXACT same sub-category
+    function generateRepeating(forceStyle = null) {
+        const styles = ['solid', 'triples', 'repeatSequence'];
+        const style = forceStyle || styles[Math.floor(Math.random() * styles.length)];
+
+        if (style === 'solid') {
+            const length = getLength();
+            const digit = Math.floor(Math.random() * 9) + 1; 
+            return { domain: digit.toString().repeat(length), type: 'Solid' };
+        } else if (style === 'triples') {
+            const d1 = Math.floor(Math.random() * 9) + 1;
+            let d2 = Math.floor(Math.random() * 9) + 1;
+            while(d2 === d1) d2 = Math.floor(Math.random() * 9) + 1; 
+            return { domain: d1.toString().repeat(3) + d2.toString().repeat(3), type: 'Triples' };
+        } else {
+            const sequences = ['123', '456', '789', '987', '654', '321'];
+            const seq = sequences[Math.floor(Math.random() * sequences.length)];
+            return { domain: seq.repeat(2), type: 'Repeater' };
         }
     }
 
     function generateRandomNumber() {
-        const length = Math.floor(Math.random() * 4) + 6;
+        const length = getLength();
         let num = "";
         for (let j = 0; j < length; j++) num += Math.floor(Math.random() * 10);
-        return num;
+        return { domain: num, type: 'Random' };
     }
 
-    function createDomainHTML(domain, isPremium, isAvailable) {
-        const fullDomain = `${domain}.xyz`;
-        const affiliateLink = `https://www.namecheap.com/domains/registration/results/?domain=${fullDomain}&aff=${AFFILIATE_ID}`;
-        const premiumClass = isPremium ? ' premium' : '';
-        const badgeHTML = isPremium ? `<span class="badge">Rare</span>` : '';
+    // --- MAP TYPES TO GENERATORS FOR REFRESHING ---
+    const generatorMap = {
+        'Sequential': generateSequential,
+        'Palindrome': generatePalindrome,
+        'Lucky': generateLucky,
+        'Prime': generatePrime,
+        'Solid': () => generateRepeating('solid'),
+        'Triples': () => generateRepeating('triples'),
+        'Repeater': () => generateRepeating('repeatSequence'),
+        'Random': generateRandomNumber
+    };
 
-        let buttonHTML = '';
-        if (isAvailable) {
-            buttonHTML = `
-                <a href="${affiliateLink}" target="_blank" class="action-btn buy">
-                    Buy $0.99
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                </a>`;
-        } else {
-            buttonHTML = `<div class="action-btn taken">Taken</div>`;
+    // --- REAL RDAP CHECK LOGIC ---
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    async function checkDomainAvailability(domain) {
+        const url = `https://rdap.centralnic.com/xyz/domain/${domain}.xyz`;
+        try {
+            const response = await fetch(url, { headers: { 'Accept': 'application/rdap+json' }});
+            if (response.status === 404) return true;  
+            if (response.status === 200) return false; 
+            if (response.status === 429) {
+                console.warn(`Registry rate limit hit on ${domain}.xyz`);
+                return false; 
+            }
+            return false; 
+        } catch (error) {
+            console.error("Network or CORS error:", error);
+            return false; 
+        }
+    }
+
+    // --- UI HELPERS ---
+    function createFinalDomainHTML(domainObj, isPremium, isAvailable, id) {
+        const fullDomain = `${domainObj.domain}.xyz`;
+        const regLink = `https://porkbun.com/checkout/search?q=${fullDomain}`; 
+        const premiumClass = isPremium ? ' premium' : '';
+        
+        let badgeHTML = '';
+        if (isPremium) {
+            const badgeClass = domainObj.type.toLowerCase(); 
+            badgeHTML = `<span class="badge ${badgeClass}">${domainObj.type}</span>`;
         }
 
+        let buttonHTML = isAvailable 
+            ? `<a href="${regLink}" target="_blank" class="action-btn buy">Available <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>`
+            : `<div class="action-btn taken">Taken</div>`;
+
         return `
-            <div class="domain-item${premiumClass}">
+            <div class="domain-item${premiumClass}" id="${id}">
                 <div class="domain-info">
-                    <div class="domain-name">${domain}<span class="ext">.xyz</span></div>
+                    <button class="refresh-btn" onclick="refreshRow('${id}', '${domainObj.type}', ${isPremium})" title="Regenerate this line">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    </button>
+                    <div class="domain-name">${domainObj.domain}<span class="ext">.xyz</span></div>
                     ${badgeHTML}
                 </div>
                 ${buttonHTML}
@@ -241,72 +370,90 @@
         `;
     }
 
-    // --- MOCK BACKEND FUNCTION FOR LOCAL TESTING ---
-    function mockBackendCheck(domains) {
-        return new Promise((resolve) => {
-            // Simulate a 1.5 second network delay
-            setTimeout(() => {
-                const results = domains.map(domain => ({
-                    domain: domain,
-                    // Simulate a 70% chance the domain is available
-                    available: Math.random() > 0.3 
-                }));
-                resolve({ results: results });
-            }, 1500);
-        });
+    // --- REFRESH SINGLE ROW LOGIC ---
+    async function refreshRow(id, type, isPremium) {
+        const rowElement = document.getElementById(id);
+        if (!rowElement) return;
+
+        // 1. Find elements to set loading states
+        const refreshBtn = rowElement.querySelector('.refresh-btn');
+        const actionBtn = rowElement.querySelector('.action-btn');
+        const domainNameDiv = rowElement.querySelector('.domain-name');
+
+        // 2. Set UI to Loading
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add('spinning');
+        actionBtn.outerHTML = `<div class="action-btn taken" style="background: transparent;"><span class="checking-text">⏳ Checking...</span></div>`;
+
+        // 3. Generate new math based on the EXACT type clicked
+        const generatorFn = generatorMap[type];
+        const newDomainObj = generatorFn();
+
+        // 4. Immediately update text so user feels response
+        domainNameDiv.innerHTML = `${newDomainObj.domain}<span class="ext">.xyz</span>`;
+
+        // 5. Query Registry & Update UI
+        const isAvailable = await checkDomainAvailability(newDomainObj.domain);
+        
+        // Grab row again in case DOM was altered
+        const updatedRow = document.getElementById(id); 
+        if(updatedRow) {
+            updatedRow.outerHTML = createFinalDomainHTML(newDomainObj, isPremium, isAvailable, id);
+        }
     }
 
+    // --- MAIN GENERATOR LOOP ---
     async function generateAndCheck() {
         const btn = document.getElementById('generate-btn');
         const premiumList = document.getElementById('premium-list');
         const randomList = document.getElementById('random-list');
         
-        // 1. Set Loading State
         btn.disabled = true;
-        btn.innerText = "⏳ Checking availability...";
-        premiumList.innerHTML = '<div class="loading-text">Contacting Registry...</div>';
-        randomList.innerHTML = '<div class="loading-text">Contacting Registry...</div>';
+        btn.innerText = "⏳ Checking registry...";
+        premiumList.innerHTML = "";
+        randomList.innerHTML = "";
 
-        // 2. Generate the numbers
-        const premiumDomains = [];
-        const randomDomains = [];
-        for (let i = 0; i < 3; i++) premiumDomains.push(generatePremiumNumber());
-        for (let i = 0; i < 5; i++) randomDomains.push(generateRandomNumber());
+        const premiumGenerators = [generateSequential, generatePalindrome, generateLucky, generatePrime, () => generateRepeating(null)];
+        const shuffledGenerators = premiumGenerators.sort(() => 0.5 - Math.random()).slice(0, 4);
+        const premiumDomains = shuffledGenerators.map(fn => fn());
         
-        const allDomainsToCheck = [...premiumDomains, ...randomDomains];
+        const randomDomains = [];
+        for (let i = 0; i < 4; i++) randomDomains.push(generateRandomNumber());
+        
+        const allDomains = [
+            ...premiumDomains.map((d, i) => ({ ...d, isPremium: true, container: premiumList, id: `prem-${i}` })),
+            ...randomDomains.map((d, i) => ({ ...d, isPremium: false, container: randomList, id: `rand-${i}` }))
+        ];
 
-        try {
-            // 3. USE THE MOCK BACKEND INSTEAD OF FETCHING FROM SCALEWAY
-            const data = await mockBackendCheck(allDomainsToCheck);
-            const results = data.results; 
+        allDomains.forEach(item => {
+            const html = `
+                <div class="domain-item${item.isPremium ? ' premium' : ''}" id="${item.id}">
+                    <div class="domain-info">
+                        <button class="refresh-btn" disabled><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
+                        <div class="domain-name">${item.domain}<span class="ext">.xyz</span></div>
+                        ${item.isPremium ? `<span class="badge ${item.type.toLowerCase()}">${item.type}</span>` : ''}
+                    </div>
+                    <div class="action-btn taken" style="background: transparent;">
+                        <span class="checking-text">⏳ Checking...</span>
+                    </div>
+                </div>
+            `;
+            item.container.innerHTML += html;
+        });
 
-            // 4. Update the UI with the results
-            premiumList.innerHTML = "";
-            randomList.innerHTML = "";
-
-            results.forEach(item => {
-                const isPremium = premiumDomains.includes(item.domain);
-                const html = createDomainHTML(item.domain, isPremium, item.available);
-                
-                if (isPremium) {
-                    premiumList.innerHTML += html;
-                } else {
-                    randomList.innerHTML += html;
-                }
-            });
-
-        } catch (error) {
-            console.error(error);
-            premiumList.innerHTML = '<div class="loading-text" style="color: #ef4444;">Error checking domains.</div>';
-            randomList.innerHTML = '';
+        for (const item of allDomains) {
+            const isAvailable = await checkDomainAvailability(item.domain);
+            const rowElement = document.getElementById(item.id);
+            if (rowElement) {
+                rowElement.outerHTML = createFinalDomainHTML(item, item.isPremium, isAvailable, item.id);
+            }
+            await sleep(300); 
         }
 
-        // 5. Reset button
         btn.disabled = false;
         btn.innerText = "✨ Generate & Check Availability";
     }
 
-    // Run once on load
     window.onload = generateAndCheck;
 </script>
 
