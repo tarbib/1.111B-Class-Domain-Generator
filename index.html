@@ -175,6 +175,9 @@
             cursor: not-allowed;
         }
 
+        .action-btn.unknown { border-color: rgba(251, 191, 36, 0.5); color: var(--gold); background: rgba(251, 191, 36, 0.08); }
+        .action-btn.unknown:hover { background: rgba(251, 191, 36, 0.2); }
+
         .action-btn svg { width: 16px; height: 16px; }
 
         /* Refresh Button Styles */
@@ -272,11 +275,15 @@
 
     function generatePrime() {
         const length = getLength();
-        let min = Math.pow(10, length - 1);
-        let max = Math.pow(10, length) - 1;
+        const min = Math.pow(10, length - 1);
+        const max = Math.pow(10, length) - 1;
         let candidate = Math.floor(Math.random() * (max - min + 1)) + min;
         if (candidate % 2 === 0) candidate++;
-        while (!isPrime(candidate)) candidate += 2;
+        while (!isPrime(candidate)) {
+            candidate += 2;
+            // Stay within the intended digit length instead of overflowing into length+1.
+            if (candidate > max) candidate = min + 1;
+        }
         return { domain: candidate.toString(), type: 'Prime' };
     }
 
@@ -322,43 +329,78 @@
     // --- REAL RDAP CHECK LOGIC ---
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    async function checkDomainAvailability(domain) {
+    // All registry lookups funnel through this single chain so concurrent
+    // hunts (multiple rows refreshing at once) can never burst-request the
+    // registry in parallel — one request in flight at a time, spaced out.
+    const RDAP_MIN_INTERVAL_MS = 350;
+    const RDAP_TIMEOUT_MS = 8000;
+    let rdapChain = Promise.resolve();
+
+    function checkDomainStatus(domain) {
+        const run = rdapChain.then(() => performRdapLookup(domain));
+        rdapChain = run.then(() => sleep(RDAP_MIN_INTERVAL_MS));
+        return run;
+    }
+
+    // Returns 'available' | 'taken' | 'unknown'. Retries 429s with backoff and
+    // retries transient network errors once, instead of reporting a domain as
+    // "taken" just because the check itself failed.
+    async function performRdapLookup(domain, attempt = 1) {
         const url = `https://rdap.centralnic.com/xyz/domain/${domain}.xyz`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), RDAP_TIMEOUT_MS);
         try {
-            const response = await fetch(url, { headers: { 'Accept': 'application/rdap+json' }});
-            if (response.status === 404) return true;  
-            if (response.status === 200) return false; 
-            if (response.status === 429) {
-                console.warn(`Registry rate limit hit on ${domain}.xyz`);
-                return false; 
+            const response = await fetch(url, {
+                headers: { 'Accept': 'application/rdap+json' },
+                signal: controller.signal
+            });
+            if (response.status === 404) return 'available';
+            if (response.status === 200) return 'taken';
+            if (response.status === 429 && attempt < 3) {
+                console.warn(`Registry rate limit hit on ${domain}.xyz, backing off (attempt ${attempt})...`);
+                await sleep(1500 * attempt);
+                return performRdapLookup(domain, attempt + 1);
             }
-            return false; 
+            console.warn(`Unexpected RDAP status ${response.status} for ${domain}.xyz`);
+            return 'unknown';
         } catch (error) {
-            console.error("Network or CORS error:", error);
-            return false; 
+            if (attempt < 2) {
+                await sleep(1000);
+                return performRdapLookup(domain, attempt + 1);
+            }
+            console.error(`RDAP check failed for ${domain}.xyz:`, error);
+            return 'unknown';
+        } finally {
+            clearTimeout(timeoutId);
         }
     }
 
     // --- UI HELPERS ---
-    function createFinalDomainHTML(domainObj, isPremium, isAvailable, id) {
+    // status: 'available' | 'taken' | 'unknown' (unknown = the check itself failed/timed out)
+    function createFinalDomainHTML(domainObj, isPremium, status, id) {
         const fullDomain = `${domainObj.domain}.xyz`;
-        const regLink = `https://porkbun.com/checkout/search?q=${fullDomain}`; 
+        const regLink = `https://porkbun.com/checkout/search?q=${fullDomain}`;
         const premiumClass = isPremium ? ' premium' : '';
-        
+
         let badgeHTML = '';
         if (isPremium) {
-            const badgeClass = domainObj.type.toLowerCase(); 
+            const badgeClass = domainObj.type.toLowerCase();
             badgeHTML = `<span class="badge ${badgeClass}">${domainObj.type}</span>`;
         }
 
-        let buttonHTML = isAvailable 
-            ? `<a href="${regLink}" target="_blank" class="action-btn buy">Available <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>`
-            : `<div class="action-btn taken">Taken</div>`;
+        let buttonHTML;
+        if (status === 'available') {
+            buttonHTML = `<a href="${regLink}" target="_blank" class="action-btn buy">Available <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>`;
+        } else if (status === 'unknown') {
+            buttonHTML = `<button class="action-btn unknown" onclick="recheckStatus('${id}', '${domainObj.domain}', '${domainObj.type}', ${isPremium})">⚠️ Unknown · Retry</button>`;
+        } else {
+            buttonHTML = `<div class="action-btn taken">Taken</div>`;
+        }
 
         return `
             <div class="domain-item${premiumClass}" id="${id}">
                 <div class="domain-info">
-                    <button class="refresh-btn" onclick="refreshRow('${id}', '${domainObj.type}', ${isPremium})" title="Hunt for an available domain">
+                    <button class="refresh-btn" onclick="refreshRow('${id}', '${domainObj.type}', ${isPremium})" title="Hunt for an available domain" aria-label="Hunt for an available domain">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                     <div class="domain-name">${domainObj.domain}<span class="ext">.xyz</span></div>
@@ -367,6 +409,21 @@
                 ${buttonHTML}
             </div>
         `;
+    }
+
+    // Re-runs the check for the exact same domain (used to recover from an 'unknown' result).
+    async function recheckStatus(id, domain, type, isPremium) {
+        const rowElement = document.getElementById(id);
+        if (!rowElement) return;
+
+        const actionBtn = rowElement.querySelector('.action-btn');
+        actionBtn.outerHTML = `<div class="action-btn taken" style="background: transparent;"><span class="checking-text">⏳ Checking...</span></div>`;
+
+        const status = await checkDomainStatus(domain);
+        const updatedRow = document.getElementById(id);
+        if (updatedRow) {
+            updatedRow.outerHTML = createFinalDomainHTML({ domain, type }, isPremium, status, id);
+        }
     }
 
     // --- AUTO-HUNT (REFRESH UNTIL AVAILABLE) LOGIC ---
@@ -384,33 +441,49 @@
         actionBtn.outerHTML = `<div class="action-btn taken" style="background: transparent;"><span class="checking-text">⏳ Hunting...</span></div>`;
 
         const generatorFn = generatorMap[type];
-        let isAvailable = false;
+        let status = 'taken';
         let attempts = 0;
         const MAX_ATTEMPTS = 12; // The Kill Switch
         let currentDomainObj;
 
-        // 2. The Hunting Loop
-        while (!isAvailable && attempts < MAX_ATTEMPTS) {
+        // 2. The Hunting Loop (request spacing is handled centrally by checkDomainStatus's queue)
+        while (status !== 'available' && attempts < MAX_ATTEMPTS) {
             attempts++;
             currentDomainObj = generatorFn();
-            
+
             // Instantly update the UI so the user sees it rapidly flipping through numbers
             domainNameDiv.innerHTML = `${currentDomainObj.domain}<span class="ext">.xyz</span> <span style="font-size: 10px; color: #64748b;">(try ${attempts})</span>`;
 
-            // Check availability
-            isAvailable = await checkDomainAvailability(currentDomainObj.domain);
-
-            // If it's taken, wait 500ms before looping again to protect your IP
-            if (!isAvailable && attempts < MAX_ATTEMPTS) {
-                await sleep(500); 
-            }
+            status = await checkDomainStatus(currentDomainObj.domain);
         }
 
         // 3. Loop finished. Update UI with the final result
-        const updatedRow = document.getElementById(id); 
+        const updatedRow = document.getElementById(id);
         if(updatedRow) {
-            updatedRow.outerHTML = createFinalDomainHTML(currentDomainObj, isPremium, isAvailable, id);
+            updatedRow.outerHTML = createFinalDomainHTML(currentDomainObj, isPremium, status, id);
         }
+    }
+
+    // Uniform Fisher-Yates shuffle (Array.sort with a random comparator is biased).
+    function shuffle(array) {
+        const arr = array.slice();
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    // Generates with fn until it produces a domain not already in usedSet (avoids
+    // duplicate rows within one batch), giving up after maxTries to guarantee termination.
+    function generateUnique(fn, usedSet, maxTries = 20) {
+        let candidate;
+        for (let i = 0; i < maxTries; i++) {
+            candidate = fn();
+            if (!usedSet.has(candidate.domain)) break;
+        }
+        usedSet.add(candidate.domain);
+        return candidate;
     }
 
     // --- MAIN GENERATOR LOOP ---
@@ -425,11 +498,12 @@
         randomList.innerHTML = "";
 
         const premiumGenerators = [generateSequential, generatePalindrome, generateLucky, generatePrime, () => generateRepeating(null)];
-        const shuffledGenerators = premiumGenerators.sort(() => 0.5 - Math.random()).slice(0, 4);
-        const premiumDomains = shuffledGenerators.map(fn => fn());
-        
+        const shuffledGenerators = shuffle(premiumGenerators).slice(0, 4);
+        const usedDomains = new Set();
+        const premiumDomains = shuffledGenerators.map(fn => generateUnique(fn, usedDomains));
+
         const randomDomains = [];
-        for (let i = 0; i < 4; i++) randomDomains.push(generateRandomNumber());
+        for (let i = 0; i < 4; i++) randomDomains.push(generateUnique(generateRandomNumber, usedDomains));
         
         const allDomains = [
             ...premiumDomains.map((d, i) => ({ ...d, isPremium: true, container: premiumList, id: `prem-${i}` })),
@@ -453,12 +527,11 @@
         });
 
         for (const item of allDomains) {
-            const isAvailable = await checkDomainAvailability(item.domain);
+            const status = await checkDomainStatus(item.domain);
             const rowElement = document.getElementById(item.id);
             if (rowElement) {
-                rowElement.outerHTML = createFinalDomainHTML(item, item.isPremium, isAvailable, item.id);
+                rowElement.outerHTML = createFinalDomainHTML(item, item.isPremium, status, item.id);
             }
-            await sleep(300); 
         }
 
         btn.disabled = false;
