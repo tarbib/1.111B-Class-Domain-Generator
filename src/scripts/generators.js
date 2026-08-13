@@ -56,6 +56,22 @@ export function generateRepeaterPattern() {
   return { domain, type: "Repeater" };
 }
 
+export function generatePairs() {
+  // Same ascending/descending walk as Sequential, but each digit is doubled
+  // (11-22-33-...) — the "AABB ladder" shape common in vanity phone numbers.
+  const length = getLength();
+  const pairCount = Math.ceil(length / 2);
+  const start = Math.floor(Math.random() * 9) + 1;
+  const isAscending = Math.random() > 0.5;
+  let domain = "";
+  for (let i = 0; i < pairCount; i++) {
+    let digit = isAscending ? (start + i) % 10 : (start - i) % 10;
+    if (digit < 0) digit += 10;
+    domain += digit.toString().repeat(2);
+  }
+  return { domain: domain.slice(0, length), type: "Pairs" };
+}
+
 // --- PREMIUM GENERATORS (categories that carry real cultural/numerical value) ---
 export function isPrime(num) {
   for (let i = 2, s = Math.sqrt(num); i <= s; i++) if (num % i === 0) return false;
@@ -81,6 +97,21 @@ export function generatePrime() {
   };
 }
 
+export function generatePerfectSquare() {
+  const length = getLength();
+  const min = Math.pow(10, length - 1);
+  const max = Math.pow(10, length) - 1;
+  const rootMin = Math.ceil(Math.sqrt(min));
+  const rootMax = Math.floor(Math.sqrt(max));
+  const root = Math.floor(Math.random() * (rootMax - rootMin + 1)) + rootMin;
+  const domain = (root * root).toString();
+  return {
+    domain,
+    type: "Square",
+    reason: `${domain} = ${root}² — a perfect square, a clean mathematical identity valued by tech, math and puzzle-driven brands.`,
+  };
+}
+
 export function generateLucky() {
   const length = getLength();
   const luckyDigits = ["6", "8", "9"];
@@ -93,6 +124,37 @@ export function generateLucky() {
   if (num.includes("9")) meanings.push("9 (longevity, 久 jiǔ)");
   const reason = `Built from ${meanings.join(", ")} — auspicious digits in Chinese numerology, and skips the unlucky 4. Highly sought after for phone numbers and plates.`;
   return { domain: num, type: "Lucky", reason };
+}
+
+const MIRROR_MAP = { 0: "0", 1: "1", 6: "9", 8: "8", 9: "6" };
+const MIRROR_DIGITS = Object.keys(MIRROR_MAP);
+const MIRROR_STABLE_DIGITS = ["0", "1", "8"]; // map to themselves, so valid as an odd-length middle digit
+
+export function generateMirror() {
+  // Strobogrammatic: rotate the digit string 180° (reverse it, then flip each
+  // digit — 6<->9, 0/1/8 unchanged) and it reads back exactly the same.
+  const length = getLength();
+  const halfLen = Math.floor(length / 2);
+  let half = "";
+  for (let i = 0; i < halfLen; i++) half += MIRROR_DIGITS[Math.floor(Math.random() * MIRROR_DIGITS.length)];
+  const mirroredHalf = half
+    .split("")
+    .reverse()
+    .map((d) => MIRROR_MAP[d])
+    .join("");
+
+  let domain;
+  if (length % 2 === 0) {
+    domain = half + mirroredHalf;
+  } else {
+    const mid = MIRROR_STABLE_DIGITS[Math.floor(Math.random() * MIRROR_STABLE_DIGITS.length)];
+    domain = half + mid + mirroredHalf;
+  }
+  return {
+    domain,
+    type: "Mirror",
+    reason: `Rotate ${domain}.xyz 180° and it reads back exactly the same — a novelty prized in vanity plates and lucky numbers.`,
+  };
 }
 
 export function generateRound() {
@@ -114,19 +176,39 @@ export function generateYear() {
   const length = getLength();
   const year = Math.floor(Math.random() * (2099 - 1950 + 1)) + 1950;
   const yearStr = year.toString();
-  const remaining = length - yearStr.length;
-  const prefixLen = Math.floor(Math.random() * (remaining + 1));
-  const suffixLen = remaining - prefixLen;
-  let prefix = "";
-  for (let i = 0; i < prefixLen; i++) prefix += randDigit();
-  let suffix = "";
-  for (let i = 0; i < suffixLen; i++) suffix += randDigit();
-  const domain = prefix + yearStr + suffix;
+  // Pad on only one side (never split around both), so the year always reads
+  // as a clean, unbroken 4-digit block at one edge of the domain instead of
+  // getting buried in the middle behind random filler digits.
+  let padding = "";
+  for (let i = 0; i < length - yearStr.length; i++) padding += randDigit();
+  const domain = Math.random() > 0.5 ? yearStr + padding : padding + yearStr;
   return {
     domain,
     type: "Year",
     reason: `Embeds ${year} — reads like a real year, great for founding-year branding, anniversaries or throwback campaigns.`,
   };
+}
+
+const ICONIC_NUMBERS = [
+  { value: "420", reason: "420 — internet shorthand tied to cannabis culture, one of the most recognized numbers online." },
+  { value: "007", reason: "007 — James Bond's number, instantly recognizable pop-culture branding." },
+  { value: "911", reason: "911 — the US emergency number, impossible not to read as urgent." },
+  { value: "42", reason: `42 — "the answer to life, the universe, and everything" from The Hitchhiker's Guide to the Galaxy.` },
+  { value: "69", reason: "69 — a widely recognized meme/joke number." },
+  { value: "100", reason: `100 — reads as "perfect score" or 100%, universally understood as maxed-out.` },
+  { value: "360", reason: "360 — a full circle in degrees, shorthand for a full turnaround or complete view." },
+  { value: "404", reason: `404 — the HTTP "Not Found" error code, instant recognition among developers.` },
+];
+
+export function generateIconic() {
+  // Same one-sided-padding anchor as Year, but for short globally-recognized
+  // numbers instead of calendar years.
+  const length = getLength();
+  const icon = ICONIC_NUMBERS[Math.floor(Math.random() * ICONIC_NUMBERS.length)];
+  let padding = "";
+  for (let i = 0; i < length - icon.value.length; i++) padding += randDigit();
+  const domain = Math.random() > 0.5 ? icon.value + padding : padding + icon.value;
+  return { domain, type: "Iconic", reason: icon.reason };
 }
 
 export const ANGEL_MEANINGS = {
@@ -140,6 +222,31 @@ export const ANGEL_MEANINGS = {
   888: "abundance & prosperity",
   999: "completion & closure",
 };
+const ANGEL_TRIPLETS = Object.keys(ANGEL_MEANINGS);
+
+// Builds a domain out of 2-3 angel-number triplets (111, 222, ...). Each block
+// is forced to differ from the one before it — otherwise repeating the same
+// triplet just degenerates into a plain repeated digit (e.g. "111"+"111" =
+// "111111"), which is indistinguishable from what Solid already generates.
+export function generateAngel() {
+  const length = getLength();
+  const blockCount = Math.ceil(length / 3);
+  const triplets = [];
+  for (let i = 0; i < blockCount; i++) {
+    let triplet;
+    do {
+      triplet = ANGEL_TRIPLETS[Math.floor(Math.random() * ANGEL_TRIPLETS.length)];
+    } while (triplet === triplets[i - 1]);
+    triplets.push(triplet);
+  }
+  const domain = triplets.join("").slice(0, length);
+  const meanings = [...new Set(triplets)].map((t) => `${t} (${ANGEL_MEANINGS[t]})`).join(" + ");
+  return {
+    domain,
+    type: "Angel",
+    reason: `Built from angel numbers ${meanings} — recognized numerology sequences. Popular in spiritual/wellness branding.`,
+  };
+}
 
 export function generateBinary() {
   const length = getLength();
@@ -153,6 +260,21 @@ export function generateBinary() {
   };
 }
 
+export function generateEvenOdd() {
+  const length = getLength();
+  const isEven = Math.random() > 0.5;
+  const digits = isEven ? ["0", "2", "4", "6", "8"] : ["1", "3", "5", "7", "9"];
+  let domain = "";
+  for (let i = 0; i < length; i++) domain += digits[Math.floor(Math.random() * digits.length)];
+  // type stays fixed ("EvenOdd") regardless of which parity got picked, so
+  // hunterMap/refresh lookups (keyed by type) keep working either way.
+  return {
+    domain,
+    type: "EvenOdd",
+    reason: `Every digit is ${isEven ? "even" : "odd"} — a clean, consistent digit pattern that's easy to say and remember.`,
+  };
+}
+
 // --- RANDOM ---
 export function generateRandomNumber() {
   const length = getLength();
@@ -162,11 +284,11 @@ export function generateRandomNumber() {
 }
 
 // --- FULLY-ENUMERATED CATEGORIES ---
-// Solid and Angel each have only ~36 possible values across all lengths (9 digits
-// or 9 angel triplets, times 4 lengths). That's small enough to check every single
-// one instead of random-sampling — random sampling with a bounded attempt budget
-// can't guarantee full coverage of a tiny space (coupon-collector problem), and
-// these iconic patterns are exactly the ones most likely to be mostly registered.
+// Solid has only ~36 possible values across all lengths (9 digits times 4
+// lengths). That's small enough to check every single one instead of
+// random-sampling — random sampling with a bounded attempt budget can't
+// guarantee full coverage of a tiny space (coupon-collector problem), and
+// this iconic pattern is exactly the one most likely to be mostly registered.
 export function enumerateSolidDomains() {
   const domains = [];
   for (let len = 6; len <= 9; len++) {
@@ -177,17 +299,22 @@ export function enumerateSolidDomains() {
   return domains;
 }
 
-export function enumerateAngelDomains() {
+// Fibonacci is even smaller than Solid — only ~19 total values across all
+// four lengths — so it gets the same exhaustive-enumeration treatment.
+export function enumerateFibonacciDomains() {
   const domains = [];
-  for (let len = 6; len <= 9; len++) {
-    for (const triplet of Object.keys(ANGEL_MEANINGS)) {
-      const domain = triplet.repeat(Math.ceil(len / 3)).slice(0, len);
+  let a = 1;
+  let b = 1;
+  while (b <= 999999999) {
+    const domain = b.toString();
+    if (domain.length >= 6 && domain.length <= 9) {
       domains.push({
         domain,
-        type: "Angel",
-        reason: `Built from ${triplet} — a recognized "angel number" said to symbolize ${ANGEL_MEANINGS[triplet]}. Popular in numerology and spiritual/wellness branding.`,
+        type: "Fibonacci",
+        reason: `${domain} is a Fibonacci number — part of nature's own growth sequence, a favorite among math and design-minded brands.`,
       });
     }
+    [a, b] = [b, a + b];
   }
   return domains;
 }

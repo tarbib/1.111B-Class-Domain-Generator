@@ -8,23 +8,30 @@ import {
   huntingDomainLabel,
 } from "./render.js";
 
-// One section per pattern type, 5 rows each. Solid is last because its pool is
-// tiny (~36 possible domains total) and mostly registered, so it's the slowest
-// and least likely to surface anything — no reason to make the rest of the
-// page wait behind it.
+// One section per pattern type, 5 rows each, ordered by the size of each
+// type's candidate pool (most possible domains first, fewest last). A bigger
+// pool means more room for random sampling to land on something available,
+// so the types least likely to still have anything free — like Solid and
+// Fibonacci, whose entire space is a few dozen values — end up last.
 export const SECTION_TYPES = [
-  "Sequential",
-  "Palindrome",
-  "Triples",
-  "Repeater",
-  "Prime",
-  "Lucky",
-  "Round",
-  "Year",
-  "Angel",
-  "Binary",
-  "Random",
-  "Solid",
+  "Random", // ~1,111,000,000 candidates
+  "Iconic", // ~57,772,000
+  "Prime", // ~50,837,942
+  "Year", // ~33,330,000
+  "EvenOdd", // ~4,875,000
+  "Round", // ~1,110,996
+  "Palindrome", // ~121,000
+  "Square", // ~31,306
+  "Lucky", // ~29,160
+  "Mirror", // ~3,000
+  "Angel", // ~1,800
+  "Binary", // ~956
+  "Triples", // ~288
+  "Sequential", // ~72
+  "Pairs", // ~72
+  "Repeater", // ~52
+  "Solid", // ~36
+  "Fibonacci", // ~19
 ];
 const RESULTS_PER_SECTION = 5;
 
