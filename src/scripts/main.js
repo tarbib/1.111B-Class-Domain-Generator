@@ -12,26 +12,22 @@ import {
 // type's candidate pool (most possible domains first, fewest last). A bigger
 // pool means more room for random sampling to land on something available,
 // so the types least likely to still have anything free — like Solid and
-// Fibonacci, whose entire space is a few dozen values — end up last.
+// Repeater, whose entire space is a few dozen values — end up last.
 export const SECTION_TYPES = [
   "Random", // ~1,111,000,000 candidates
   "Iconic", // ~57,772,000
   "Prime", // ~50,837,942
-  "Year", // ~33,330,000
   "EvenOdd", // ~4,875,000
   "Round", // ~1,110,996
   "Palindrome", // ~121,000
-  "Square", // ~31,306
-  "Lucky", // ~29,160
-  "Mirror", // ~3,000
+  "Date", // ~54,787 (valid DDMMYYYY calendar dates, 1950-2099)
   "Angel", // ~1,800
   "Binary", // ~956
+  "Sequential", // ~700
   "Triples", // ~288
-  "Sequential", // ~72
-  "Pairs", // ~72
-  "Repeater", // ~52
+  "Pairs", // ~36
   "Solid", // ~36
-  "Fibonacci", // ~19
+  "Repeater", // ~26
 ];
 const RESULTS_PER_SECTION = 5;
 

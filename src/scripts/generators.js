@@ -10,15 +10,18 @@ export function randDigit() {
 // --- HIGHLY MEMORABLE GENERATORS (structural patterns that are easy to recall) ---
 export function generateSequential() {
   const length = getLength();
-  const start = Math.floor(Math.random() * 9) + 1;
-  let num = "";
   const isAscending = Math.random() > 0.5;
-  for (let i = 0; i < length; i++) {
-    let digit = isAscending ? (start + i) % 10 : (start - i) % 10;
-    if (digit < 0) digit += 10;
-    num += digit;
+  // Start from any two-digit number, then chain the actual consecutive count
+  // from there (e.g. 33,34,35,36,37 -> "3334353637") instead of wrapping
+  // single digits mod 10. Starting at 10+ guarantees the descending walk
+  // can't go negative before `length` digits are filled.
+  let current = Math.floor(Math.random() * 90) + 10;
+  let domain = "";
+  while (domain.length < length) {
+    domain += current.toString();
+    current += isAscending ? 1 : -1;
   }
-  return { domain: num, type: "Sequential" };
+  return { domain: domain.slice(0, length), type: "Sequential" };
 }
 
 export function generatePalindrome() {
@@ -47,20 +50,25 @@ export function generateTriples() {
 }
 
 export function generateRepeaterPattern() {
-  // Repeat a short block to fill `length` (rather than a fixed 6 chars) so
-  // hunting has a large enough space to actually find something available.
-  const length = getLength();
+  // Repeat the whole block an exact integer number of times (e.g. 135135)
+  // instead of cutting into a partial repeat at the end (e.g. 1351351).
   const sequences = ["12", "98", "69", "24", "75", "123", "456", "789", "987", "654", "321", "135", "246"];
   const seq = sequences[Math.floor(Math.random() * sequences.length)];
-  const domain = seq.repeat(Math.ceil(length / seq.length)).slice(0, length);
+  const minRepeats = Math.ceil(6 / seq.length);
+  const maxRepeats = Math.floor(9 / seq.length);
+  const repeats = Math.floor(Math.random() * (maxRepeats - minRepeats + 1)) + minRepeats;
+  const domain = seq.repeat(repeats);
   return { domain, type: "Repeater" };
 }
 
 export function generatePairs() {
   // Same ascending/descending walk as Sequential, but each digit is doubled
   // (11-22-33-...) — the "AABB ladder" shape common in vanity phone numbers.
-  const length = getLength();
-  const pairCount = Math.ceil(length / 2);
+  // Length is forced even so every pair lands whole instead of getting
+  // chopped in half at the end.
+  let length = getLength();
+  if (length % 2 !== 0) length -= 1;
+  const pairCount = length / 2;
   const start = Math.floor(Math.random() * 9) + 1;
   const isAscending = Math.random() > 0.5;
   let domain = "";
@@ -69,7 +77,7 @@ export function generatePairs() {
     if (digit < 0) digit += 10;
     domain += digit.toString().repeat(2);
   }
-  return { domain: domain.slice(0, length), type: "Pairs" };
+  return { domain, type: "Pairs" };
 }
 
 // --- PREMIUM GENERATORS (categories that carry real cultural/numerical value) ---
@@ -97,66 +105,6 @@ export function generatePrime() {
   };
 }
 
-export function generatePerfectSquare() {
-  const length = getLength();
-  const min = Math.pow(10, length - 1);
-  const max = Math.pow(10, length) - 1;
-  const rootMin = Math.ceil(Math.sqrt(min));
-  const rootMax = Math.floor(Math.sqrt(max));
-  const root = Math.floor(Math.random() * (rootMax - rootMin + 1)) + rootMin;
-  const domain = (root * root).toString();
-  return {
-    domain,
-    type: "Square",
-    reason: `${domain} = ${root}² — a perfect square, a clean mathematical identity valued by tech, math and puzzle-driven brands.`,
-  };
-}
-
-export function generateLucky() {
-  const length = getLength();
-  const luckyDigits = ["6", "8", "9"];
-  let num = "";
-  for (let i = 0; i < length; i++) num += luckyDigits[Math.floor(Math.random() * luckyDigits.length)];
-
-  const meanings = [];
-  if (num.includes("8")) meanings.push("8 (prosperity, 发 fā)");
-  if (num.includes("6")) meanings.push("6 (smooth progress, 溜 liù)");
-  if (num.includes("9")) meanings.push("9 (longevity, 久 jiǔ)");
-  const reason = `Built from ${meanings.join(", ")} — auspicious digits in Chinese numerology, and skips the unlucky 4. Highly sought after for phone numbers and plates.`;
-  return { domain: num, type: "Lucky", reason };
-}
-
-const MIRROR_MAP = { 0: "0", 1: "1", 6: "9", 8: "8", 9: "6" };
-const MIRROR_DIGITS = Object.keys(MIRROR_MAP);
-const MIRROR_STABLE_DIGITS = ["0", "1", "8"]; // map to themselves, so valid as an odd-length middle digit
-
-export function generateMirror() {
-  // Strobogrammatic: rotate the digit string 180° (reverse it, then flip each
-  // digit — 6<->9, 0/1/8 unchanged) and it reads back exactly the same.
-  const length = getLength();
-  const halfLen = Math.floor(length / 2);
-  let half = "";
-  for (let i = 0; i < halfLen; i++) half += MIRROR_DIGITS[Math.floor(Math.random() * MIRROR_DIGITS.length)];
-  const mirroredHalf = half
-    .split("")
-    .reverse()
-    .map((d) => MIRROR_MAP[d])
-    .join("");
-
-  let domain;
-  if (length % 2 === 0) {
-    domain = half + mirroredHalf;
-  } else {
-    const mid = MIRROR_STABLE_DIGITS[Math.floor(Math.random() * MIRROR_STABLE_DIGITS.length)];
-    domain = half + mid + mirroredHalf;
-  }
-  return {
-    domain,
-    type: "Mirror",
-    reason: `Rotate ${domain}.xyz 180° and it reads back exactly the same — a novelty prized in vanity plates and lucky numbers.`,
-  };
-}
-
 export function generateRound() {
   const length = getLength();
   // Always leaves at least 1 lead digit and at least 3 trailing zeros.
@@ -172,20 +120,20 @@ export function generateRound() {
   };
 }
 
-export function generateYear() {
-  const length = getLength();
+export function generateDate() {
+  // Fixed DDMMYYYY shape (8 digits) instead of the variable 6-9 length used
+  // elsewhere — a date only reads cleanly in its natural calendar format.
   const year = Math.floor(Math.random() * (2099 - 1950 + 1)) + 1950;
-  const yearStr = year.toString();
-  // Pad on only one side (never split around both), so the year always reads
-  // as a clean, unbroken 4-digit block at one edge of the domain instead of
-  // getting buried in the middle behind random filler digits.
-  let padding = "";
-  for (let i = 0; i < length - yearStr.length; i++) padding += randDigit();
-  const domain = Math.random() > 0.5 ? yearStr + padding : padding + yearStr;
+  const month = Math.floor(Math.random() * 12) + 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const day = Math.floor(Math.random() * daysInMonth) + 1;
+  const dd = day.toString().padStart(2, "0");
+  const mm = month.toString().padStart(2, "0");
+  const domain = `${dd}${mm}${year}`;
   return {
     domain,
-    type: "Year",
-    reason: `Embeds ${year} — reads like a real year, great for founding-year branding, anniversaries or throwback campaigns.`,
+    type: "Date",
+    reason: `Reads as ${dd}/${mm}/${year} — a real calendar date, great for birthdays, anniversaries or founding-date branding.`,
   };
 }
 
@@ -201,8 +149,9 @@ const ICONIC_NUMBERS = [
 ];
 
 export function generateIconic() {
-  // Same one-sided-padding anchor as Year, but for short globally-recognized
-  // numbers instead of calendar years.
+  // Pads on only one side (never split around both), so the icon always
+  // reads as a clean, unbroken block at one edge of the domain instead of
+  // getting buried in the middle behind random filler digits.
   const length = getLength();
   const icon = ICONIC_NUMBERS[Math.floor(Math.random() * ICONIC_NUMBERS.length)];
   let padding = "";
@@ -295,26 +244,6 @@ export function enumerateSolidDomains() {
     for (let d = 1; d <= 9; d++) {
       domains.push({ domain: d.toString().repeat(len), type: "Solid" });
     }
-  }
-  return domains;
-}
-
-// Fibonacci is even smaller than Solid — only ~19 total values across all
-// four lengths — so it gets the same exhaustive-enumeration treatment.
-export function enumerateFibonacciDomains() {
-  const domains = [];
-  let a = 1;
-  let b = 1;
-  while (b <= 999999999) {
-    const domain = b.toString();
-    if (domain.length >= 6 && domain.length <= 9) {
-      domains.push({
-        domain,
-        type: "Fibonacci",
-        reason: `${domain} is a Fibonacci number — part of nature's own growth sequence, a favorite among math and design-minded brands.`,
-      });
-    }
-    [a, b] = [b, a + b];
   }
   return domains;
 }
