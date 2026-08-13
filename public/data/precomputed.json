@@ -1,65 +1,65 @@
 {
-  "generatedAt": "2026-08-13T21:11:24.688Z",
+  "generatedAt": "2026-08-13T21:36:06.338Z",
   "sections": {
     "angel": [
       {
-        "domain": "777555999",
+        "domain": "22233377",
         "type": "Angel",
-        "reason": "Built from angel numbers 777 (luck & spiritual awakening) + 555 (change on the way) + 999 (completion & closure) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "reason": "Built from angel numbers 222 (balance & harmony) + 333 (growth & expansion) + 777 (luck & spiritual awakening) — recognized numerology sequences. Popular in spiritual/wellness branding.",
         "status": "available"
       },
       {
-        "domain": "22211177",
+        "domain": "22288899",
         "type": "Angel",
-        "reason": "Built from angel numbers 222 (balance & harmony) + 111 (new beginnings) + 777 (luck & spiritual awakening) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "reason": "Built from angel numbers 222 (balance & harmony) + 888 (abundance & prosperity) + 999 (completion & closure) — recognized numerology sequences. Popular in spiritual/wellness branding.",
         "status": "available"
       },
       {
-        "domain": "33377722",
+        "domain": "11188855",
         "type": "Angel",
-        "reason": "Built from angel numbers 333 (growth & expansion) + 777 (luck & spiritual awakening) + 222 (balance & harmony) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "reason": "Built from angel numbers 111 (new beginnings) + 888 (abundance & prosperity) + 555 (change on the way) — recognized numerology sequences. Popular in spiritual/wellness branding.",
         "status": "available"
       },
       {
-        "domain": "555111222",
+        "domain": "2226664",
         "type": "Angel",
-        "reason": "Built from angel numbers 555 (change on the way) + 111 (new beginnings) + 222 (balance & harmony) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "reason": "Built from angel numbers 222 (balance & harmony) + 666 (realignment & focus) + 444 (protection & stability) — recognized numerology sequences. Popular in spiritual/wellness branding.",
         "status": "available"
       },
       {
-        "domain": "222999444",
+        "domain": "6665559",
         "type": "Angel",
-        "reason": "Built from angel numbers 222 (balance & harmony) + 999 (completion & closure) + 444 (protection & stability) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "reason": "Built from angel numbers 666 (realignment & focus) + 555 (change on the way) + 999 (completion & closure) — recognized numerology sequences. Popular in spiritual/wellness branding.",
         "status": "available"
       }
     ],
     "binary": [
       {
-        "domain": "101111110",
+        "domain": "00011010",
         "type": "Binary",
         "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
         "status": "available"
       },
       {
-        "domain": "000001011",
+        "domain": "110001001",
         "type": "Binary",
         "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
         "status": "available"
       },
       {
-        "domain": "111001010",
+        "domain": "011011110",
         "type": "Binary",
         "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
         "status": "available"
       },
       {
-        "domain": "110111000",
+        "domain": "001000110",
         "type": "Binary",
         "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
         "status": "available"
       },
       {
-        "domain": "011000001",
+        "domain": "010111110",
         "type": "Binary",
         "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
         "status": "available"
@@ -67,7 +67,7 @@
     ],
     "sequential": [
       {
-        "domain": "383736",
+        "domain": "50494847",
         "type": "Sequential",
         "status": "available"
       },
@@ -77,88 +77,93 @@
         "status": "available"
       },
       {
-        "domain": "56555453",
+        "domain": "383736",
         "type": "Sequential",
         "status": "available"
       },
       {
-        "domain": "42414039",
+        "domain": "21201918",
         "type": "Sequential",
         "status": "available"
       },
       {
-        "domain": "95969798",
+        "domain": "52515049",
         "type": "Sequential",
         "status": "available"
       }
     ],
     "triples": [
       {
-        "domain": "555551111",
-        "type": "Triples",
-        "status": "available"
-      },
-      {
-        "domain": "111115555",
-        "type": "Triples",
-        "status": "available"
-      },
-      {
         "domain": "888881111",
         "type": "Triples",
         "status": "available"
       },
       {
-        "domain": "111112222",
+        "domain": "888884444",
         "type": "Triples",
         "status": "available"
       },
       {
-        "domain": "888883333",
+        "domain": "444449999",
+        "type": "Triples",
+        "status": "available"
+      },
+      {
+        "domain": "111119999",
+        "type": "Triples",
+        "status": "available"
+      },
+      {
+        "domain": "444441111",
         "type": "Triples",
         "status": "available"
       }
     ],
     "pairs": [
       {
-        "domain": "11009988",
-        "type": "Pairs",
-        "status": "available"
-      },
-      {
         "domain": "22110099",
         "type": "Pairs",
         "status": "available"
       },
       {
-        "domain": "445566",
+        "domain": "11009988",
+        "type": "Pairs",
+        "status": "available"
+      },
+      {
+        "domain": "33221100",
         "type": "Pairs",
         "status": "taken"
       },
       {
-        "domain": "112233",
+        "domain": "55667788",
         "type": "Pairs",
         "status": "taken"
       },
       {
-        "domain": "221100",
+        "domain": "88990011",
         "type": "Pairs",
         "status": "taken"
       }
     ],
     "solid": [
       {
-        "domain": "9999999",
+        "domain": "999999",
         "type": "Solid",
         "status": "taken"
       },
       {
-        "domain": "333333",
+        "domain": "66666666",
         "type": "Solid",
         "status": "taken"
       },
       {
-        "domain": "666666",
+        "domain": "99999999",
+        "type": "Solid",
+        "status": "taken"
+      },
+      {
+        "domain": "2222222",
         "type": "Solid",
         "status": "taken"
       },
@@ -166,36 +171,31 @@
         "domain": "666666666",
         "type": "Solid",
         "status": "taken"
-      },
-      {
-        "domain": "33333333",
-        "type": "Solid",
-        "status": "taken"
       }
     ],
     "repeater": [
       {
-        "domain": "123123123",
+        "domain": "246246",
         "type": "Repeater",
         "status": "taken"
       },
       {
-        "domain": "24242424",
+        "domain": "321321",
         "type": "Repeater",
         "status": "taken"
       },
       {
-        "domain": "456456",
+        "domain": "75757575",
         "type": "Repeater",
         "status": "taken"
       },
       {
-        "domain": "121212",
+        "domain": "696969",
         "type": "Repeater",
         "status": "taken"
       },
       {
-        "domain": "135135135",
+        "domain": "654654654",
         "type": "Repeater",
         "status": "taken"
       }
