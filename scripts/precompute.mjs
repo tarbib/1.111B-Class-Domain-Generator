@@ -20,6 +20,18 @@ const OUTPUT_PATH = join(__dirname, "..", "public", "data", "precomputed.json");
 // worse than leaving the last published data in place.
 const UNKNOWN_RATIO_ABORT_THRESHOLD = 0.5;
 
+// Per type, keep calling hunt() until RESULTS_PER_SECTION available domains
+// are found or this many hunt() calls have been made -- whichever comes
+// first. Only "available" results ever get written (see main loop below), so
+// a type can end up with fewer than RESULTS_PER_SECTION rows, or none, if a
+// pattern is mostly/fully registered -- main.js already treats a missing row
+// as "hunt this one live" with zero extra code needed. The 3x multiplier
+// gives small randomly-sampled pools (Repeater, Pairs, ...) a real shot at
+// surfacing available domains a single capped huntForAvailable call might
+// statistically miss; for exhaustive pools (Solid) it's mostly a harmless
+// no-op since one call already checks everything not yet claimed.
+const HUNT_CALLS_PER_TYPE = RESULTS_PER_SECTION * 3;
+
 async function main() {
   // Scoped to precomputed types only -- this Set never needs to know live
   // types exist. Mirrors the same per-run dedup pattern main.js already uses
@@ -35,16 +47,21 @@ async function main() {
       throw new Error(`hunterMap has no entry for "${type}" -- PRECOMPUTED_TYPES and hunterMap are out of sync.`);
     }
     const rows = [];
-    for (let i = 0; i < RESULTS_PER_SECTION; i++) {
+    let huntCalls = 0;
+    while (rows.length < RESULTS_PER_SECTION && huntCalls < HUNT_CALLS_PER_TYPE) {
+      huntCalls++;
       const { domainObj, status } = await hunt(usedDomains, (obj, attempts) => {
         process.stdout.write(`  [${type}] attempt ${attempts}: ${obj.domain}.xyz\n`);
       });
       totalChecks++;
       if (status === "unknown") unknownChecks++;
-      rows.push({ ...domainObj, status });
+      if (status === "available") rows.push({ ...domainObj, status });
     }
     sections[type.toLowerCase()] = rows;
-    console.log(`[${type}] ${rows.map((r) => `${r.domain}(${r.status})`).join(", ")}`);
+    console.log(
+      `[${type}] ${rows.length}/${RESULTS_PER_SECTION} available after ${huntCalls} hunt(s): ` +
+        rows.map((r) => r.domain).join(", "),
+    );
   }
 
   const unknownRatio = totalChecks ? unknownChecks / totalChecks : 0;
