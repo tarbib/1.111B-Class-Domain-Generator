@@ -14,14 +14,22 @@ export function generateSequential() {
   // Start from any two-digit number, then chain the actual consecutive count
   // from there (e.g. 33,34,35,36,37 -> "3334353637") instead of wrapping
   // single digits mod 10. Starting at 10+ guarantees the descending walk
-  // can't go negative before `length` digits are filled.
-  let current = Math.floor(Math.random() * 90) + 10;
-  let domain = "";
-  while (domain.length < length) {
-    domain += current.toString();
-    current += isAscending ? 1 : -1;
-  }
-  return { domain: domain.slice(0, length), type: "Sequential" };
+  // can't go negative before `length` digits are filled. Numbers are only
+  // ever added whole — never chopped mid-number (e.g. 88 followed by just
+  // "8" instead of 89) — so a start near a digit-count boundary (e.g.
+  // 98,99,100) can fall short of 6 digits; retry until it doesn't.
+  let domain;
+  do {
+    let current = Math.floor(Math.random() * 90) + 10;
+    domain = "";
+    while (true) {
+      const next = current.toString();
+      if (domain.length + next.length > length) break;
+      domain += next;
+      current += isAscending ? 1 : -1;
+    }
+  } while (domain.length < 6);
+  return { domain, type: "Sequential" };
 }
 
 export function generatePalindrome() {
