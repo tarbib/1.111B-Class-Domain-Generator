@@ -1,4 +1,4 @@
-import { hunterMap } from "./hunters.js";
+import { hunterMap, PRECOMPUTED_TYPES, RESULTS_PER_SECTION } from "./hunters.js";
 import { checkDomainStatus } from "./rdap.js";
 import {
   rowState,
@@ -29,7 +29,32 @@ export const SECTION_TYPES = [
   "Solid", // ~36
   "Repeater", // ~26
 ];
-const RESULTS_PER_SECTION = 5;
+
+const PRECOMPUTED_DATA_URL = "/data/precomputed.json";
+const PRECOMPUTED_FETCH_TIMEOUT_MS = 5000;
+
+// Fetches the cron-generated dataset (see scripts/precompute.mjs). Never
+// throws -- returns null on any failure (missing file, timeout, bad JSON) so
+// callers fall back to live hunting for those sections instead of rendering
+// nothing.
+async function fetchPrecomputedData() {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PRECOMPUTED_FETCH_TIMEOUT_MS);
+  try {
+    // no-store: this file is overwritten in place at a stable URL (unlike
+    // Astro's content-hashed JS/CSS bundles), so it must not be served from a
+    // stale browser cache across deploys.
+    const response = await fetch(PRECOMPUTED_DATA_URL, { signal: controller.signal, cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    return json.sections ?? null;
+  } catch (error) {
+    console.warn("Precomputed data unavailable, falling back to live hunting:", error);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 // Re-runs the check for the exact same domain (used to recover from an 'unknown' result).
 async function recheckStatus(id) {
@@ -84,7 +109,7 @@ async function generateAndCheck() {
     const container = document.getElementById(`${type.toLowerCase()}-list`);
     container.innerHTML = "";
     for (let i = 0; i < RESULTS_PER_SECTION; i++) {
-      items.push({ type, container, id: `${type.toLowerCase()}-${i}` });
+      items.push({ type, container, id: `${type.toLowerCase()}-${i}`, indexInType: i });
     }
   }
 
@@ -93,11 +118,31 @@ async function generateAndCheck() {
     item.container.innerHTML += placeholderRowHTML(item.id);
   });
 
-  // Hunt sequentially per row (Solid's items land last, see SECTION_TYPES);
-  // checkDomainStatus already serializes actual network calls, so this keeps
-  // UI updates predictable without adding extra delay.
-  const usedDomains = new Set();
+  // Kick the precomputed-data fetch off in parallel with everything else --
+  // it's a same-origin static file with no RDAP throttle, so it resolves
+  // well before the first live hunt below even completes.
+  const precomputedSections = await fetchPrecomputedData();
+
+  const liveItems = [];
   for (const item of items) {
+    if (!PRECOMPUTED_TYPES.includes(item.type)) {
+      liveItems.push(item);
+      continue;
+    }
+    const row = precomputedSections?.[item.type.toLowerCase()]?.[item.indexInType];
+    if (row) {
+      const rowElement = document.getElementById(item.id);
+      if (rowElement) rowElement.outerHTML = createFinalDomainHTML(row, row.status, item.id);
+    } else {
+      // Missing/incomplete precomputed data for this row -- hunt it live instead.
+      liveItems.push(item);
+    }
+  }
+
+  // Hunt sequentially per row; checkDomainStatus already serializes actual
+  // network calls, so this keeps UI updates predictable without adding delay.
+  const usedDomains = new Set();
+  for (const item of liveItems) {
     const rowElement = document.getElementById(item.id);
     const domainNameSpan = rowElement.querySelector(".domain-name");
     const { domainObj, status } = await hunterMap[item.type](usedDomains, (obj, attempts) => {

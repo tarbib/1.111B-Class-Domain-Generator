@@ -1,0 +1,204 @@
+{
+  "generatedAt": "2026-08-13T21:11:24.688Z",
+  "sections": {
+    "angel": [
+      {
+        "domain": "777555999",
+        "type": "Angel",
+        "reason": "Built from angel numbers 777 (luck & spiritual awakening) + 555 (change on the way) + 999 (completion & closure) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "status": "available"
+      },
+      {
+        "domain": "22211177",
+        "type": "Angel",
+        "reason": "Built from angel numbers 222 (balance & harmony) + 111 (new beginnings) + 777 (luck & spiritual awakening) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "status": "available"
+      },
+      {
+        "domain": "33377722",
+        "type": "Angel",
+        "reason": "Built from angel numbers 333 (growth & expansion) + 777 (luck & spiritual awakening) + 222 (balance & harmony) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "status": "available"
+      },
+      {
+        "domain": "555111222",
+        "type": "Angel",
+        "reason": "Built from angel numbers 555 (change on the way) + 111 (new beginnings) + 222 (balance & harmony) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "status": "available"
+      },
+      {
+        "domain": "222999444",
+        "type": "Angel",
+        "reason": "Built from angel numbers 222 (balance & harmony) + 999 (completion & closure) + 444 (protection & stability) — recognized numerology sequences. Popular in spiritual/wellness branding.",
+        "status": "available"
+      }
+    ],
+    "binary": [
+      {
+        "domain": "101111110",
+        "type": "Binary",
+        "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
+        "status": "available"
+      },
+      {
+        "domain": "000001011",
+        "type": "Binary",
+        "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
+        "status": "available"
+      },
+      {
+        "domain": "111001010",
+        "type": "Binary",
+        "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
+        "status": "available"
+      },
+      {
+        "domain": "110111000",
+        "type": "Binary",
+        "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
+        "status": "available"
+      },
+      {
+        "domain": "011000001",
+        "type": "Binary",
+        "reason": "Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.",
+        "status": "available"
+      }
+    ],
+    "sequential": [
+      {
+        "domain": "383736",
+        "type": "Sequential",
+        "status": "available"
+      },
+      {
+        "domain": "70696867",
+        "type": "Sequential",
+        "status": "available"
+      },
+      {
+        "domain": "56555453",
+        "type": "Sequential",
+        "status": "available"
+      },
+      {
+        "domain": "42414039",
+        "type": "Sequential",
+        "status": "available"
+      },
+      {
+        "domain": "95969798",
+        "type": "Sequential",
+        "status": "available"
+      }
+    ],
+    "triples": [
+      {
+        "domain": "555551111",
+        "type": "Triples",
+        "status": "available"
+      },
+      {
+        "domain": "111115555",
+        "type": "Triples",
+        "status": "available"
+      },
+      {
+        "domain": "888881111",
+        "type": "Triples",
+        "status": "available"
+      },
+      {
+        "domain": "111112222",
+        "type": "Triples",
+        "status": "available"
+      },
+      {
+        "domain": "888883333",
+        "type": "Triples",
+        "status": "available"
+      }
+    ],
+    "pairs": [
+      {
+        "domain": "11009988",
+        "type": "Pairs",
+        "status": "available"
+      },
+      {
+        "domain": "22110099",
+        "type": "Pairs",
+        "status": "available"
+      },
+      {
+        "domain": "445566",
+        "type": "Pairs",
+        "status": "taken"
+      },
+      {
+        "domain": "112233",
+        "type": "Pairs",
+        "status": "taken"
+      },
+      {
+        "domain": "221100",
+        "type": "Pairs",
+        "status": "taken"
+      }
+    ],
+    "solid": [
+      {
+        "domain": "9999999",
+        "type": "Solid",
+        "status": "taken"
+      },
+      {
+        "domain": "333333",
+        "type": "Solid",
+        "status": "taken"
+      },
+      {
+        "domain": "666666",
+        "type": "Solid",
+        "status": "taken"
+      },
+      {
+        "domain": "666666666",
+        "type": "Solid",
+        "status": "taken"
+      },
+      {
+        "domain": "33333333",
+        "type": "Solid",
+        "status": "taken"
+      }
+    ],
+    "repeater": [
+      {
+        "domain": "123123123",
+        "type": "Repeater",
+        "status": "taken"
+      },
+      {
+        "domain": "24242424",
+        "type": "Repeater",
+        "status": "taken"
+      },
+      {
+        "domain": "456456",
+        "type": "Repeater",
+        "status": "taken"
+      },
+      {
+        "domain": "121212",
+        "type": "Repeater",
+        "status": "taken"
+      },
+      {
+        "domain": "135135135",
+        "type": "Repeater",
+        "status": "taken"
+      }
+    ]
+  }
+}

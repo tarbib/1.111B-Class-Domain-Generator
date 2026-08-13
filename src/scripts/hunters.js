@@ -38,3 +38,15 @@ export const hunterMap = {
   EvenOdd: (used, onAttempt) => huntForAvailable(generateEvenOdd, used, onAttempt),
   Random: (used, onAttempt) => huntForAvailable(generateRandomNumber, used, onAttempt),
 };
+
+// --- PRECOMPUTED VS LIVE ---
+// Shared by main.js in the browser and scripts/precompute.mjs (the cron job
+// that hunts these ahead of time and publishes public/data/precomputed.json)
+// -- single source of truth for which types get cron-precomputed, so the two
+// runtimes can never drift apart. Small-pool types (mostly already taken, so
+// every visitor would otherwise re-run a near-exhaustive hunt on every page
+// load) are precomputed; large-pool types find an available domain within a
+// couple of live attempts, so there's no benefit to precomputing them.
+export const PRECOMPUTED_TYPES = ["Angel", "Binary", "Sequential", "Triples", "Pairs", "Solid", "Repeater"];
+
+export const RESULTS_PER_SECTION = 5;
