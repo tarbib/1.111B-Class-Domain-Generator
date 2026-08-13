@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1.111B Class Domain Generator</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
             --primary: #DE3C2B;
@@ -76,7 +76,7 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(222, 60, 43, 0.6);
         }
-        
+
         .generate-btn:disabled {
             background: var(--disabled);
             cursor: not-allowed;
@@ -99,8 +99,8 @@
 
         .domain-item {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 8px;
             padding: 16px 20px;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -108,9 +108,21 @@
             transition: all 0.2s ease;
         }
 
+        .domain-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
         .domain-item.premium {
             background: rgba(251, 191, 36, 0.05);
             border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+
+        .domain-item.memorable {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
         }
 
         .domain-item:hover {
@@ -129,7 +141,16 @@
         }
 
         .domain-item.premium .domain-name { color: var(--gold); }
+        .domain-item.memorable .domain-name { color: #818cf8; }
         .ext { color: var(--text-muted); font-weight: 400; }
+
+        .reason-text {
+            font-size: 12px;
+            line-height: 1.4;
+            color: var(--text-muted);
+            font-style: italic;
+            padding-left: 44px;
+        }
 
         .badge {
             font-size: 10px;
@@ -139,15 +160,21 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
-        /* Custom Premium Badges */
-        .badge.lucky { color: #f43f5e; background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.3); }
-        .badge.prime { color: #a855f7; background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.3); }
+
+        /* Highly Memorable badges */
         .badge.sequential { color: #3b82f6; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge.palindrome { color: #06b6d4; background: rgba(6, 182, 212, 0.2); border: 1px solid rgba(6, 182, 212, 0.3); }
         .badge.solid { color: #ef4444; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); }
         .badge.triples { color: #10b981; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); }
         .badge.repeater { color: #f97316; background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.3); }
-        .badge.palindrome { color: #06b6d4; background: rgba(6, 182, 212, 0.2); border: 1px solid rgba(6, 182, 212, 0.3); }
+
+        /* Premium badges */
+        .badge.lucky { color: #f43f5e; background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.3); }
+        .badge.prime { color: #a855f7; background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.3); }
+        .badge.round { color: #14b8a6; background: rgba(20, 184, 166, 0.2); border: 1px solid rgba(20, 184, 166, 0.3); }
+        .badge.year { color: #0ea5e9; background: rgba(14, 165, 233, 0.2); border: 1px solid rgba(14, 165, 233, 0.3); }
+        .badge.angel { color: #d946ef; background: rgba(217, 70, 239, 0.2); border: 1px solid rgba(217, 70, 239, 0.3); }
+        .badge.binary { color: #84cc16; background: rgba(132, 204, 22, 0.2); border: 1px solid rgba(132, 204, 22, 0.3); }
 
         .action-btn {
             background-color: transparent;
@@ -167,7 +194,7 @@
 
         .action-btn.buy { border-color: var(--success); color: var(--success); }
         .action-btn.buy:hover { background-color: var(--success); color: #0f172a; }
-        
+
         .action-btn.taken {
             border-color: transparent;
             color: var(--text-muted);
@@ -206,7 +233,7 @@
         .refresh-btn:hover:not(:disabled) svg { transform: rotate(90deg); }
         .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
-        
+
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .checking-text { display: inline-block; animation: pulse 1.5s infinite; font-style: italic; }
@@ -221,8 +248,11 @@
     </div>
 
     <button class="generate-btn" id="generate-btn" onclick="generateAndCheck()">✨ Generate & Check Availability</button>
-    
-    <div class="section-title">🔥 Premium Patterns</div>
+
+    <div class="section-title">🧠 Highly Memorable</div>
+    <div class="domain-list" id="memorable-list"></div>
+
+    <div class="section-title">💎 Premium</div>
     <div class="domain-list" id="premium-list"></div>
 
     <div class="section-title">🎲 Random Picks</div>
@@ -230,17 +260,19 @@
 </div>
 
 <script>
-    // --- PREMIUM GENERATOR LOGIC ---
-    function getLength() { return Math.floor(Math.random() * 4) + 6; } 
+    // --- SHARED HELPERS ---
+    function getLength() { return Math.floor(Math.random() * 4) + 6; }
+    function randDigit() { return Math.floor(Math.random() * 10); }
 
+    // --- HIGHLY MEMORABLE GENERATORS (structural patterns that are easy to recall) ---
     function generateSequential() {
         const length = getLength();
-        const start = Math.floor(Math.random() * 9) + 1; 
+        const start = Math.floor(Math.random() * 9) + 1;
         let num = "";
         const isAscending = Math.random() > 0.5;
         for(let i = 0; i < length; i++) {
             let digit = isAscending ? (start + i) % 10 : (start - i) % 10;
-            if (digit < 0) digit += 10; 
+            if (digit < 0) digit += 10;
             num += digit;
         }
         return { domain: num, type: 'Sequential' };
@@ -250,24 +282,38 @@
         const length = getLength();
         const halfLen = Math.floor(length / 2);
         let half = "";
-        for(let i=0; i < halfLen; i++) half += Math.floor(Math.random() * 10);
-        
+        for(let i=0; i < halfLen; i++) half += randDigit();
+
         if (length % 2 === 0) {
             return { domain: half + half.split('').reverse().join(''), type: 'Palindrome' };
         } else {
-            const mid = Math.floor(Math.random() * 10);
+            const mid = randDigit();
             return { domain: half + mid + half.split('').reverse().join(''), type: 'Palindrome' };
         }
     }
 
-    function generateLucky() {
+    function generateTriples() {
+        // Split the domain into two runs of a repeated digit, sized to `length`
+        // instead of a fixed 6 chars, so the search space scales with length too.
         const length = getLength();
-        const luckyDigits = ['6', '8', '9']; 
-        let num = "";
-        for(let i=0; i < length; i++) num += luckyDigits[Math.floor(Math.random() * luckyDigits.length)];
-        return { domain: num, type: 'Lucky' };
+        const firstRunLen = Math.ceil(length / 2);
+        const d1 = Math.floor(Math.random() * 9) + 1;
+        let d2 = Math.floor(Math.random() * 9) + 1;
+        while(d2 === d1) d2 = Math.floor(Math.random() * 9) + 1;
+        return { domain: d1.toString().repeat(firstRunLen) + d2.toString().repeat(length - firstRunLen), type: 'Triples' };
     }
 
+    function generateRepeaterPattern() {
+        // Repeat a short block to fill `length` (rather than a fixed 6 chars) so
+        // hunting has a large enough space to actually find something available.
+        const length = getLength();
+        const sequences = ['12', '98', '69', '24', '75', '123', '456', '789', '987', '654', '321', '135', '246'];
+        const seq = sequences[Math.floor(Math.random() * sequences.length)];
+        const domain = seq.repeat(Math.ceil(length / seq.length)).slice(0, length);
+        return { domain, type: 'Repeater' };
+    }
+
+    // --- PREMIUM GENERATORS (categories that carry real cultural/numerical value) ---
     function isPrime(num) {
         for(let i = 2, s = Math.sqrt(num); i <= s; i++) if(num % i === 0) return false;
         return num > 1;
@@ -284,47 +330,98 @@
             // Stay within the intended digit length instead of overflowing into length+1.
             if (candidate > max) candidate = min + 1;
         }
-        return { domain: candidate.toString(), type: 'Prime' };
+        const domain = candidate.toString();
+        return { domain, type: 'Prime', reason: `${domain} is prime — no factors besides 1 and itself, a mathematically unique identity prized by tech, crypto and math-driven brands.` };
     }
 
-    function generateRepeating(forceStyle = null) {
-        const styles = ['solid', 'triples', 'repeatSequence'];
-        const style = forceStyle || styles[Math.floor(Math.random() * styles.length)];
+    function generateLucky() {
+        const length = getLength();
+        const luckyDigits = ['6', '8', '9'];
+        let num = "";
+        for(let i=0; i < length; i++) num += luckyDigits[Math.floor(Math.random() * luckyDigits.length)];
 
-        if (style === 'solid') {
-            const length = getLength();
-            const digit = Math.floor(Math.random() * 9) + 1; 
-            return { domain: digit.toString().repeat(length), type: 'Solid' };
-        } else if (style === 'triples') {
-            const d1 = Math.floor(Math.random() * 9) + 1;
-            let d2 = Math.floor(Math.random() * 9) + 1;
-            while(d2 === d1) d2 = Math.floor(Math.random() * 9) + 1; 
-            return { domain: d1.toString().repeat(3) + d2.toString().repeat(3), type: 'Triples' };
-        } else {
-            const sequences = ['123', '456', '789', '987', '654', '321'];
-            const seq = sequences[Math.floor(Math.random() * sequences.length)];
-            return { domain: seq.repeat(2), type: 'Repeater' };
-        }
+        const meanings = [];
+        if (num.includes('8')) meanings.push('8 (prosperity, 发 fā)');
+        if (num.includes('6')) meanings.push('6 (smooth progress, 溜 liù)');
+        if (num.includes('9')) meanings.push('9 (longevity, 久 jiǔ)');
+        const reason = `Built from ${meanings.join(', ')} — auspicious digits in Chinese numerology, and skips the unlucky 4. Highly sought after for phone numbers and plates.`;
+        return { domain: num, type: 'Lucky', reason };
     }
 
+    function generateRound() {
+        const length = getLength();
+        // Always leaves at least 1 lead digit and at least 3 trailing zeros.
+        const zeroCount = Math.floor(Math.random() * (length - 3)) + 3;
+        const leadLength = length - zeroCount;
+        let lead = (Math.floor(Math.random() * 9) + 1).toString();
+        for (let i = 1; i < leadLength; i++) lead += randDigit();
+        const domain = lead + "0".repeat(zeroCount);
+        return { domain, type: 'Round', reason: `Ends in ${zeroCount} zeros — reads like a clean, round milestone number. Easy to say, easy to remember, "big number" branding.` };
+    }
+
+    function generateYear() {
+        const length = getLength();
+        const year = Math.floor(Math.random() * (2099 - 1950 + 1)) + 1950;
+        const yearStr = year.toString();
+        const remaining = length - yearStr.length;
+        const prefixLen = Math.floor(Math.random() * (remaining + 1));
+        const suffixLen = remaining - prefixLen;
+        let prefix = "";
+        for (let i = 0; i < prefixLen; i++) prefix += randDigit();
+        let suffix = "";
+        for (let i = 0; i < suffixLen; i++) suffix += randDigit();
+        const domain = prefix + yearStr + suffix;
+        return { domain, type: 'Year', reason: `Embeds ${year} — reads like a real year, great for founding-year branding, anniversaries or throwback campaigns.` };
+    }
+
+    const ANGEL_MEANINGS = {
+        '111': 'new beginnings', '222': 'balance & harmony', '333': 'growth & expansion',
+        '444': 'protection & stability', '555': 'change on the way', '666': 'realignment & focus',
+        '777': 'luck & spiritual awakening', '888': 'abundance & prosperity', '999': 'completion & closure'
+    };
+
+    function generateBinary() {
+        const length = getLength();
+        let num = "";
+        for (let i = 0; i < length; i++) num += Math.floor(Math.random() * 2);
+        if (/^0+$/.test(num)) num = '1' + num.slice(1);
+        return { domain: num, type: 'Binary', reason: `Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.` };
+    }
+
+    // --- RANDOM ---
     function generateRandomNumber() {
         const length = getLength();
         let num = "";
-        for (let j = 0; j < length; j++) num += Math.floor(Math.random() * 10);
+        for (let j = 0; j < length; j++) num += randDigit();
         return { domain: num, type: 'Random' };
     }
 
-    // --- MAP TYPES TO GENERATORS FOR REFRESHING ---
-    const generatorMap = {
-        'Sequential': generateSequential,
-        'Palindrome': generatePalindrome,
-        'Lucky': generateLucky,
-        'Prime': generatePrime,
-        'Solid': () => generateRepeating('solid'),
-        'Triples': () => generateRepeating('triples'),
-        'Repeater': () => generateRepeating('repeatSequence'),
-        'Random': generateRandomNumber
-    };
+    // --- FULLY-ENUMERATED CATEGORIES ---
+    // Solid and Angel each have only ~36 possible values across all lengths (9 digits
+    // or 9 angel triplets, times 4 lengths). That's small enough to check every single
+    // one instead of random-sampling — random sampling with a bounded attempt budget
+    // can't guarantee full coverage of a tiny space (coupon-collector problem), and
+    // these iconic patterns are exactly the ones most likely to be mostly registered.
+    function enumerateSolidDomains() {
+        const domains = [];
+        for (let len = 6; len <= 9; len++) {
+            for (let d = 1; d <= 9; d++) {
+                domains.push({ domain: d.toString().repeat(len), type: 'Solid' });
+            }
+        }
+        return domains;
+    }
+
+    function enumerateAngelDomains() {
+        const domains = [];
+        for (let len = 6; len <= 9; len++) {
+            for (const triplet of Object.keys(ANGEL_MEANINGS)) {
+                const domain = triplet.repeat(Math.ceil(len / 3)).slice(0, len);
+                domains.push({ domain, type: 'Angel', reason: `Built from ${triplet} — a recognized "angel number" said to symbolize ${ANGEL_MEANINGS[triplet]}. Popular in numerology and spiritual/wellness branding.` });
+            }
+        }
+        return domains;
+    }
 
     // --- REAL RDAP CHECK LOGIC ---
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -334,6 +431,10 @@
     // registry in parallel — one request in flight at a time, spaced out.
     const RDAP_MIN_INTERVAL_MS = 350;
     const RDAP_TIMEOUT_MS = 8000;
+    // Kill switch so a hunt can't spin forever. Some curated patterns (e.g. Solid,
+    // Angel) only have a few dozen possible values total, so this needs to be high
+    // enough to get close to exhaustive coverage of those small spaces.
+    const MAX_HUNT_ATTEMPTS = 40;
     let rdapChain = Promise.resolve();
 
     function checkDomainStatus(domain) {
@@ -375,92 +476,159 @@
         }
     }
 
+    // Keeps generating candidates from generatorFn and checking them (through the
+    // shared rate-limited queue) until one comes back available, or MAX_HUNT_ATTEMPTS
+    // is hit. `usedDomains`, if given, is used to skip candidates already claimed by
+    // another row in the same batch without spending an RDAP request on them. Also
+    // skips exact repeats within this hunt, so smaller pattern spaces (e.g. Repeater's
+    // ~50 possible values) get closer to full coverage instead of re-querying the
+    // same candidate multiple times inside the attempt budget.
+    async function huntForAvailable(generatorFn, usedDomains, onAttempt) {
+        let status = 'taken';
+        let attempts = 0;
+        let domainObj;
+        const attempted = new Set();
+        while (status !== 'available' && attempts < MAX_HUNT_ATTEMPTS) {
+            attempts++;
+            domainObj = generatorFn();
+            if (attempted.has(domainObj.domain) || (usedDomains && usedDomains.has(domainObj.domain))) continue;
+            attempted.add(domainObj.domain);
+            if (onAttempt) onAttempt(domainObj, attempts);
+            status = await checkDomainStatus(domainObj.domain);
+        }
+        if (usedDomains && status === 'available') usedDomains.add(domainObj.domain);
+        return { domainObj, status };
+    }
+
+    // Tries every candidate from a small, fully-enumerated pool exactly once (in
+    // random order) instead of random sampling — see enumerateSolidDomains/
+    // enumerateAngelDomains for why this matters for those two categories.
+    async function huntExhaustive(candidates, usedDomains, onAttempt) {
+        const pool = shuffle(candidates);
+        let status = 'taken';
+        let domainObj = pool[0];
+        let attempts = 0;
+        for (const candidate of pool) {
+            if (usedDomains && usedDomains.has(candidate.domain)) continue;
+            attempts++;
+            domainObj = candidate;
+            if (onAttempt) onAttempt(domainObj, attempts);
+            status = await checkDomainStatus(candidate.domain);
+            if (status === 'available') break;
+        }
+        if (usedDomains && status === 'available') usedDomains.add(domainObj.domain);
+        return { domainObj, status };
+    }
+
+    // --- HUNTERS PER TYPE ---
+    // Each entry is a (usedDomains, onAttempt) => Promise<{domainObj, status}> function,
+    // so calling code doesn't need to know whether a type is randomly generated or
+    // drawn from a fixed enumerated pool.
+    const SOLID_POOL = enumerateSolidDomains();
+    const ANGEL_POOL = enumerateAngelDomains();
+    const hunterMap = {
+        'Sequential': (used, onAttempt) => huntForAvailable(generateSequential, used, onAttempt),
+        'Palindrome': (used, onAttempt) => huntForAvailable(generatePalindrome, used, onAttempt),
+        'Solid': (used, onAttempt) => huntExhaustive(SOLID_POOL, used, onAttempt),
+        'Triples': (used, onAttempt) => huntForAvailable(generateTriples, used, onAttempt),
+        'Repeater': (used, onAttempt) => huntForAvailable(generateRepeaterPattern, used, onAttempt),
+        'Prime': (used, onAttempt) => huntForAvailable(generatePrime, used, onAttempt),
+        'Lucky': (used, onAttempt) => huntForAvailable(generateLucky, used, onAttempt),
+        'Round': (used, onAttempt) => huntForAvailable(generateRound, used, onAttempt),
+        'Year': (used, onAttempt) => huntForAvailable(generateYear, used, onAttempt),
+        'Angel': (used, onAttempt) => huntExhaustive(ANGEL_POOL, used, onAttempt),
+        'Binary': (used, onAttempt) => huntForAvailable(generateBinary, used, onAttempt),
+        'Random': (used, onAttempt) => huntForAvailable(generateRandomNumber, used, onAttempt)
+    };
+
     // --- UI HELPERS ---
+    // Remembers each row's current domain + section so refresh/recheck clicks
+    // (which only get an id) can look up what they're operating on.
+    const rowState = new Map();
+
     // status: 'available' | 'taken' | 'unknown' (unknown = the check itself failed/timed out)
-    function createFinalDomainHTML(domainObj, isPremium, status, id) {
+    function createFinalDomainHTML(domainObj, sectionClass, status, id) {
+        rowState.set(id, { domainObj, sectionClass });
+
         const fullDomain = `${domainObj.domain}.xyz`;
         const regLink = `https://porkbun.com/checkout/search?q=${fullDomain}`;
-        const premiumClass = isPremium ? ' premium' : '';
+        const itemClass = sectionClass ? ` ${sectionClass}` : '';
 
         let badgeHTML = '';
-        if (isPremium) {
+        if (sectionClass) {
             const badgeClass = domainObj.type.toLowerCase();
             badgeHTML = `<span class="badge ${badgeClass}">${domainObj.type}</span>`;
+        }
+
+        let reasonHTML = '';
+        if (domainObj.reason) {
+            reasonHTML = `<div class="reason-text">${domainObj.reason}</div>`;
         }
 
         let buttonHTML;
         if (status === 'available') {
             buttonHTML = `<a href="${regLink}" target="_blank" class="action-btn buy">Available <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>`;
         } else if (status === 'unknown') {
-            buttonHTML = `<button class="action-btn unknown" onclick="recheckStatus('${id}', '${domainObj.domain}', '${domainObj.type}', ${isPremium})">⚠️ Unknown · Retry</button>`;
+            buttonHTML = `<button class="action-btn unknown" onclick="recheckStatus('${id}')">⚠️ Unknown · Retry</button>`;
         } else {
             buttonHTML = `<div class="action-btn taken">Taken</div>`;
         }
 
         return `
-            <div class="domain-item${premiumClass}" id="${id}">
-                <div class="domain-info">
-                    <button class="refresh-btn" onclick="refreshRow('${id}', '${domainObj.type}', ${isPremium})" title="Hunt for an available domain" aria-label="Hunt for an available domain">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    </button>
-                    <div class="domain-name">${domainObj.domain}<span class="ext">.xyz</span></div>
-                    ${badgeHTML}
+            <div class="domain-item${itemClass}" id="${id}">
+                <div class="domain-row">
+                    <div class="domain-info">
+                        <button class="refresh-btn" onclick="refreshRow('${id}')" title="Hunt for an available domain" aria-label="Hunt for an available domain">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                        <div class="domain-name">${domainObj.domain}<span class="ext">.xyz</span></div>
+                        ${badgeHTML}
+                    </div>
+                    ${buttonHTML}
                 </div>
-                ${buttonHTML}
+                ${reasonHTML}
             </div>
         `;
     }
 
     // Re-runs the check for the exact same domain (used to recover from an 'unknown' result).
-    async function recheckStatus(id, domain, type, isPremium) {
+    async function recheckStatus(id) {
+        const state = rowState.get(id);
         const rowElement = document.getElementById(id);
-        if (!rowElement) return;
+        if (!state || !rowElement) return;
 
         const actionBtn = rowElement.querySelector('.action-btn');
         actionBtn.outerHTML = `<div class="action-btn taken" style="background: transparent;"><span class="checking-text">⏳ Checking...</span></div>`;
 
-        const status = await checkDomainStatus(domain);
+        const status = await checkDomainStatus(state.domainObj.domain);
         const updatedRow = document.getElementById(id);
         if (updatedRow) {
-            updatedRow.outerHTML = createFinalDomainHTML({ domain, type }, isPremium, status, id);
+            updatedRow.outerHTML = createFinalDomainHTML(state.domainObj, state.sectionClass, status, id);
         }
     }
 
     // --- AUTO-HUNT (REFRESH UNTIL AVAILABLE) LOGIC ---
-    async function refreshRow(id, type, isPremium) {
+    async function refreshRow(id) {
+        const state = rowState.get(id);
         const rowElement = document.getElementById(id);
-        if (!rowElement) return;
+        if (!state || !rowElement) return;
 
         const refreshBtn = rowElement.querySelector('.refresh-btn');
         const actionBtn = rowElement.querySelector('.action-btn');
         const domainNameDiv = rowElement.querySelector('.domain-name');
 
-        // 1. Lock the UI for this row
         refreshBtn.disabled = true;
         refreshBtn.classList.add('spinning');
         actionBtn.outerHTML = `<div class="action-btn taken" style="background: transparent;"><span class="checking-text">⏳ Hunting...</span></div>`;
 
-        const generatorFn = generatorMap[type];
-        let status = 'taken';
-        let attempts = 0;
-        const MAX_ATTEMPTS = 12; // The Kill Switch
-        let currentDomainObj;
+        const hunt = hunterMap[state.domainObj.type];
+        const { domainObj, status } = await hunt(null, (obj, attempts) => {
+            domainNameDiv.innerHTML = `${obj.domain}<span class="ext">.xyz</span> <span style="font-size: 10px; color: #64748b;">(try ${attempts})</span>`;
+        });
 
-        // 2. The Hunting Loop (request spacing is handled centrally by checkDomainStatus's queue)
-        while (status !== 'available' && attempts < MAX_ATTEMPTS) {
-            attempts++;
-            currentDomainObj = generatorFn();
-
-            // Instantly update the UI so the user sees it rapidly flipping through numbers
-            domainNameDiv.innerHTML = `${currentDomainObj.domain}<span class="ext">.xyz</span> <span style="font-size: 10px; color: #64748b;">(try ${attempts})</span>`;
-
-            status = await checkDomainStatus(currentDomainObj.domain);
-        }
-
-        // 3. Loop finished. Update UI with the final result
         const updatedRow = document.getElementById(id);
-        if(updatedRow) {
-            updatedRow.outerHTML = createFinalDomainHTML(currentDomainObj, isPremium, status, id);
+        if (updatedRow) {
+            updatedRow.outerHTML = createFinalDomainHTML(domainObj, state.sectionClass, status, id);
         }
     }
 
@@ -474,64 +642,58 @@
         return arr;
     }
 
-    // Generates with fn until it produces a domain not already in usedSet (avoids
-    // duplicate rows within one batch), giving up after maxTries to guarantee termination.
-    function generateUnique(fn, usedSet, maxTries = 20) {
-        let candidate;
-        for (let i = 0; i < maxTries; i++) {
-            candidate = fn();
-            if (!usedSet.has(candidate.domain)) break;
-        }
-        usedSet.add(candidate.domain);
-        return candidate;
-    }
-
     // --- MAIN GENERATOR LOOP ---
     async function generateAndCheck() {
         const btn = document.getElementById('generate-btn');
+        const memorableList = document.getElementById('memorable-list');
         const premiumList = document.getElementById('premium-list');
         const randomList = document.getElementById('random-list');
-        
+
         btn.disabled = true;
-        btn.innerText = "⏳ Checking registry...";
+        btn.innerText = "🔎 Hunting for available domains...";
+        memorableList.innerHTML = "";
         premiumList.innerHTML = "";
         randomList.innerHTML = "";
+        rowState.clear();
 
-        const premiumGenerators = [generateSequential, generatePalindrome, generateLucky, generatePrime, () => generateRepeating(null)];
-        const shuffledGenerators = shuffle(premiumGenerators).slice(0, 4);
-        const usedDomains = new Set();
-        const premiumDomains = shuffledGenerators.map(fn => generateUnique(fn, usedDomains));
+        const memorableTypes = shuffle(['Sequential', 'Palindrome', 'Solid', 'Triples', 'Repeater']).slice(0, 4);
+        const premiumTypes = shuffle(['Lucky', 'Prime', 'Round', 'Year', 'Angel', 'Binary']).slice(0, 4);
 
-        const randomDomains = [];
-        for (let i = 0; i < 4; i++) randomDomains.push(generateUnique(generateRandomNumber, usedDomains));
-        
-        const allDomains = [
-            ...premiumDomains.map((d, i) => ({ ...d, isPremium: true, container: premiumList, id: `prem-${i}` })),
-            ...randomDomains.map((d, i) => ({ ...d, isPremium: false, container: randomList, id: `rand-${i}` }))
+        const items = [
+            ...memorableTypes.map((type, i) => ({ type, sectionClass: 'memorable', container: memorableList, id: `mem-${i}` })),
+            ...premiumTypes.map((type, i) => ({ type, sectionClass: 'premium', container: premiumList, id: `prem-${i}` })),
+            ...Array.from({ length: 4 }, (_, i) => ({ type: 'Random', sectionClass: '', container: randomList, id: `rand-${i}` }))
         ];
 
-        allDomains.forEach(item => {
+        // Render placeholders for every row up front so the layout appears immediately.
+        items.forEach(item => {
             const html = `
-                <div class="domain-item${item.isPremium ? ' premium' : ''}" id="${item.id}">
-                    <div class="domain-info">
-                        <button class="refresh-btn" disabled><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
-                        <div class="domain-name">${item.domain}<span class="ext">.xyz</span></div>
-                        ${item.isPremium ? `<span class="badge ${item.type.toLowerCase()}">${item.type}</span>` : ''}
-                    </div>
-                    <div class="action-btn taken" style="background: transparent;">
-                        <span class="checking-text">⏳ Checking...</span>
+                <div class="domain-item${item.sectionClass ? ' ' + item.sectionClass : ''}" id="${item.id}">
+                    <div class="domain-row">
+                        <div class="domain-info">
+                            <button class="refresh-btn" disabled><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
+                            <div class="domain-name">Searching<span class="ext">.xyz</span></div>
+                        </div>
+                        <div class="action-btn taken" style="background: transparent;">
+                            <span class="checking-text">⏳ Hunting...</span>
+                        </div>
                     </div>
                 </div>
             `;
             item.container.innerHTML += html;
         });
 
-        for (const item of allDomains) {
-            const status = await checkDomainStatus(item.domain);
+        // Hunt sequentially per row; checkDomainStatus already serializes actual
+        // network calls, so this keeps UI updates predictable without adding extra delay.
+        const usedDomains = new Set();
+        for (const item of items) {
             const rowElement = document.getElementById(item.id);
-            if (rowElement) {
-                rowElement.outerHTML = createFinalDomainHTML(item, item.isPremium, status, item.id);
-            }
+            const domainNameDiv = rowElement.querySelector('.domain-name');
+            const { domainObj, status } = await hunterMap[item.type](usedDomains, (obj, attempts) => {
+                domainNameDiv.innerHTML = `${obj.domain}<span class="ext">.xyz</span> <span style="font-size: 10px; color: #64748b;">(try ${attempts})</span>`;
+            });
+            const freshRow = document.getElementById(item.id);
+            if (freshRow) freshRow.outerHTML = createFinalDomainHTML(domainObj, item.sectionClass, status, item.id);
         }
 
         btn.disabled = false;
