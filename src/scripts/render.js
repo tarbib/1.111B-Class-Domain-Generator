@@ -1,20 +1,6 @@
-// Remembers each row's current domain + section so refresh/recheck clicks
-// (which only carry an id) can look up what they're operating on.
+// Remembers each row's current domain so refresh/recheck clicks (which only
+// carry an id) can look up what they're operating on.
 export const rowState = new Map();
-
-const BADGE_COLORS = {
-  Sequential: "primary",
-  Palindrome: "info",
-  Solid: "danger",
-  Triples: "success",
-  Repeater: "warning",
-  Lucky: "danger",
-  Prime: "dark",
-  Round: "info",
-  Year: "primary",
-  Angel: "secondary",
-  Binary: "success",
-};
 
 const REFRESH_ICON = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>`;
 
@@ -22,7 +8,7 @@ function refreshButtonHTML(id, extraClass = "") {
   return `<button class="btn btn-sm btn-outline-secondary refresh-btn ${extraClass}" data-action="refresh" data-id="${id}" title="Hunt for an available domain" aria-label="Hunt for an available domain">${REFRESH_ICON}</button>`;
 }
 
-function huntingRowHTML(id, sectionClass, domainLabel = "Searching") {
+function huntingRowHTML(id, domainLabel = "Searching") {
   return `
     <div class="list-group-item" id="${id}">
       <div class="d-flex justify-content-between align-items-center gap-2">
@@ -39,22 +25,16 @@ function huntingRowHTML(id, sectionClass, domainLabel = "Searching") {
 }
 
 // Renders the placeholder row shown the moment a hunt for `id` starts.
-export function placeholderRowHTML(id, sectionClass) {
-  return huntingRowHTML(id, sectionClass);
+export function placeholderRowHTML(id) {
+  return huntingRowHTML(id);
 }
 
 // status: 'available' | 'taken' | 'unknown' (unknown = the check itself failed/timed out)
-export function createFinalDomainHTML(domainObj, sectionClass, status, id) {
-  rowState.set(id, { domainObj, sectionClass });
+export function createFinalDomainHTML(domainObj, status, id) {
+  rowState.set(id, { domainObj });
 
   const fullDomain = `${domainObj.domain}.xyz`;
   const regLink = `https://porkbun.com/checkout/search?q=${fullDomain}`;
-
-  let badgeHTML = "";
-  if (sectionClass) {
-    const color = BADGE_COLORS[domainObj.type] || "secondary";
-    badgeHTML = `<span class="badge text-bg-${color}">${domainObj.type}</span>`;
-  }
 
   let reasonHTML = "";
   if (domainObj.reason) {
@@ -76,7 +56,6 @@ export function createFinalDomainHTML(domainObj, sectionClass, status, id) {
         <div class="d-flex align-items-center gap-2 flex-wrap">
           ${refreshButtonHTML(id)}
           <span class="font-monospace fw-bold fs-5 domain-name">${domainObj.domain}<span class="text-secondary">.xyz</span></span>
-          ${badgeHTML}
         </div>
         ${buttonHTML}
       </div>

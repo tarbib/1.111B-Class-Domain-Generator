@@ -1,6 +1,5 @@
 import { hunterMap } from "./hunters.js";
 import { checkDomainStatus } from "./rdap.js";
-import { shuffle } from "./hunt.js";
 import {
   rowState,
   createFinalDomainHTML,
@@ -8,6 +7,26 @@ import {
   checkingButtonHTML,
   huntingDomainLabel,
 } from "./render.js";
+
+// One section per pattern type, 5 rows each. Solid is last because its pool is
+// tiny (~36 possible domains total) and mostly registered, so it's the slowest
+// and least likely to surface anything — no reason to make the rest of the
+// page wait behind it.
+export const SECTION_TYPES = [
+  "Sequential",
+  "Palindrome",
+  "Triples",
+  "Repeater",
+  "Prime",
+  "Lucky",
+  "Round",
+  "Year",
+  "Angel",
+  "Binary",
+  "Random",
+  "Solid",
+];
+const RESULTS_PER_SECTION = 5;
 
 // Re-runs the check for the exact same domain (used to recover from an 'unknown' result).
 async function recheckStatus(id) {
@@ -21,7 +40,7 @@ async function recheckStatus(id) {
   const status = await checkDomainStatus(state.domainObj.domain);
   const updatedRow = document.getElementById(id);
   if (updatedRow) {
-    updatedRow.outerHTML = createFinalDomainHTML(state.domainObj, state.sectionClass, status, id);
+    updatedRow.outerHTML = createFinalDomainHTML(state.domainObj, status, id);
   }
 }
 
@@ -46,40 +65,34 @@ async function refreshRow(id) {
 
   const updatedRow = document.getElementById(id);
   if (updatedRow) {
-    updatedRow.outerHTML = createFinalDomainHTML(domainObj, state.sectionClass, status, id);
+    updatedRow.outerHTML = createFinalDomainHTML(domainObj, status, id);
   }
 }
 
 // --- MAIN GENERATOR LOOP ---
 async function generateAndCheck() {
   const btn = document.getElementById("generate-btn");
-  const memorableList = document.getElementById("memorable-list");
-  const premiumList = document.getElementById("premium-list");
-  const randomList = document.getElementById("random-list");
-
   btn.disabled = true;
   btn.innerText = "🔎 Hunting for available domains...";
-  memorableList.innerHTML = "";
-  premiumList.innerHTML = "";
-  randomList.innerHTML = "";
   rowState.clear();
 
-  const memorableTypes = shuffle(["Sequential", "Palindrome", "Solid", "Triples", "Repeater"]).slice(0, 4);
-  const premiumTypes = shuffle(["Lucky", "Prime", "Round", "Year", "Angel", "Binary"]).slice(0, 4);
-
-  const items = [
-    ...memorableTypes.map((type, i) => ({ type, sectionClass: "memorable", container: memorableList, id: `mem-${i}` })),
-    ...premiumTypes.map((type, i) => ({ type, sectionClass: "premium", container: premiumList, id: `prem-${i}` })),
-    ...Array.from({ length: 4 }, (_, i) => ({ type: "Random", sectionClass: "", container: randomList, id: `rand-${i}` })),
-  ];
+  const items = [];
+  for (const type of SECTION_TYPES) {
+    const container = document.getElementById(`${type.toLowerCase()}-list`);
+    container.innerHTML = "";
+    for (let i = 0; i < RESULTS_PER_SECTION; i++) {
+      items.push({ type, container, id: `${type.toLowerCase()}-${i}` });
+    }
+  }
 
   // Render placeholders for every row up front so the layout appears immediately.
   items.forEach((item) => {
-    item.container.innerHTML += placeholderRowHTML(item.id, item.sectionClass);
+    item.container.innerHTML += placeholderRowHTML(item.id);
   });
 
-  // Hunt sequentially per row; checkDomainStatus already serializes actual
-  // network calls, so this keeps UI updates predictable without adding extra delay.
+  // Hunt sequentially per row (Solid's items land last, see SECTION_TYPES);
+  // checkDomainStatus already serializes actual network calls, so this keeps
+  // UI updates predictable without adding extra delay.
   const usedDomains = new Set();
   for (const item of items) {
     const rowElement = document.getElementById(item.id);
@@ -88,7 +101,7 @@ async function generateAndCheck() {
       domainNameSpan.innerHTML = huntingDomainLabel(obj.domain, attempts);
     });
     const freshRow = document.getElementById(item.id);
-    if (freshRow) freshRow.outerHTML = createFinalDomainHTML(domainObj, item.sectionClass, status, item.id);
+    if (freshRow) freshRow.outerHTML = createFinalDomainHTML(domainObj, status, item.id);
   }
 
   btn.disabled = false;
