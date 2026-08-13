@@ -1,0 +1,35 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Navbar from "../components/Navbar.astro";
+import DomainSection from "../components/DomainSection.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout>
+  <Navbar />
+
+  <main class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-xl-7">
+        <div class="text-center mb-4">
+          <h1 class="display-6 fw-bold">1.111B Class Domain Generator</h1>
+          <p class="text-secondary">Discover &amp; register rare numeric .xyz domains.</p>
+        </div>
+
+        <div class="d-grid mb-5">
+          <button id="generate-btn" class="btn btn-primary btn-lg">✨ Generate &amp; Check Availability</button>
+        </div>
+
+        <DomainSection icon="🧠" label="Highly Memorable" listId="memorable-list" />
+        <DomainSection icon="💎" label="Premium" listId="premium-list" />
+        <DomainSection icon="🎲" label="Random Picks" listId="random-list" />
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <script>
+    import "../scripts/main.js";
+  </script>
+</Layout>

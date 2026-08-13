@@ -1,0 +1,14 @@
+---
+interface Props {
+  icon: string;
+  label: string;
+  listId: string;
+}
+
+const { icon, label, listId } = Astro.props;
+---
+
+<section class="mb-5">
+  <h6 class="text-uppercase text-secondary fw-bold mb-3">{icon} {label}</h6>
+  <div class="list-group" id={listId}></div>
+</section>

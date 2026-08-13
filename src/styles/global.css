@@ -1,0 +1,27 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+
+body {
+  font-family: "Inter", sans-serif;
+}
+
+.font-monospace {
+  font-family: "JetBrains Mono", monospace !important;
+}
+
+.refresh-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.refresh-btn:hover:not(:disabled) svg {
+  transform: rotate(90deg);
+}
+
+.refresh-btn.spinning svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
