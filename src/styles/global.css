@@ -90,8 +90,23 @@ body {
 .calendar-day-pending {
   background: var(--bs-tertiary-bg);
   color: var(--bs-tertiary-color);
+  animation: calendar-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes calendar-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .calendar-day-today {
   box-shadow: 0 0 0 2px var(--bs-primary);
+}
+
+#calendar-year-select {
+  width: auto;
 }

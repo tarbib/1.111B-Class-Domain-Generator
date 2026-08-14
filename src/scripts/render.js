@@ -140,23 +140,51 @@ function calendarDayCellHTML(day, domain, status, isToday) {
   return `<div class="calendar-day ${stateClass}${isToday ? " calendar-day-today" : ""}" data-day="${day}" title="${domain}.xyz — ${label}">${inner}</div>`;
 }
 
+function calendarYearOptionsHTML(selectedYear, minYear, maxYear) {
+  let html = "";
+  for (let y = minYear; y <= maxYear; y++) {
+    html += `<option value="${y}"${y === selectedYear ? " selected" : ""}>${y}</option>`;
+  }
+  return html;
+}
+
+// The static wrapper -- nav arrows, month label, year picker, "Today"
+// shortcut -- rendered once. Only #calendar-days gets replaced on every
+// month change, so the controls (and their listeners, attached by main.js)
+// don't need to be re-created on every navigation.
+export function calendarShellHTML(year, minYear, maxYear) {
+  return `
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar-prev" aria-label="Previous month">&lsaquo;</button>
+      <div class="d-flex align-items-center gap-2">
+        <span class="fw-bold small" id="calendar-month-label"></span>
+        <select class="form-select form-select-sm" id="calendar-year-select" aria-label="Year">${calendarYearOptionsHTML(year, minYear, maxYear)}</select>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar-today">Today</button>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar-next" aria-label="Next month">&rsaquo;</button>
+    </div>
+    <div class="calendar-weekdays">${WEEKDAY_LABELS.map((d) => `<span>${d}</span>`).join("")}</div>
+    <div class="calendar-days" id="calendar-days"></div>
+  `;
+}
+
 // `days` is [{day, domain}, ...] for every day of the month (see
 // enumerateMonthDomains). `statusByDay` maps day -> status for whichever days
-// precomputed data already covers; the rest render as "pending" until
-// fillMissingCalendarDays (main.js) checks them live.
-export function calendarGridHTML(year, month, days, statusByDay, today) {
+// precomputed data already covers; the rest render "pending" (visibly
+// loading) until the caller checks them live and calls updateCalendarDayCell.
+export function calendarDaysHTML(year, month, days, statusByDay, todayDay) {
   const firstWeekday = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Monday = 0
   const emptyCells = Array.from({ length: firstWeekday }, () => `<div class="calendar-day calendar-day-empty"></div>`).join(
     "",
   );
   const dayCells = days
-    .map(({ day, domain }) => calendarDayCellHTML(day, domain, statusByDay.get(day) ?? null, day === today))
+    .map(({ day, domain }) => calendarDayCellHTML(day, domain, statusByDay.get(day) ?? null, day === todayDay))
     .join("");
-  return `
-    <div class="calendar-month-label small fw-bold text-secondary mb-2">${MONTH_NAMES[month - 1]} ${year}</div>
-    <div class="calendar-weekdays">${WEEKDAY_LABELS.map((d) => `<span>${d}</span>`).join("")}</div>
-    <div class="calendar-days">${emptyCells}${dayCells}</div>
-  `;
+  return emptyCells + dayCells;
+}
+
+export function calendarMonthLabel(year, month) {
+  return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
 // Swaps a single day cell (identified by data-day) into its resolved state.

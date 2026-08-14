@@ -123,8 +123,14 @@ function formatDateDomain(day, month, year) {
   return { dd, mm, domain: `${dd}${mm}${year}` };
 }
 
+// Also the range the calendar's year picker offers (see main.js) -- kept in
+// sync so every year the calendar can navigate to is one generateDate could
+// theoretically have produced too.
+export const DATE_MIN_YEAR = 1950;
+export const DATE_MAX_YEAR = 2099;
+
 export function generateDate() {
-  const year = Math.floor(Math.random() * (2099 - 1950 + 1)) + 1950;
+  const year = Math.floor(Math.random() * (DATE_MAX_YEAR - DATE_MIN_YEAR + 1)) + DATE_MIN_YEAR;
   const month = Math.floor(Math.random() * 12) + 1;
   const daysInMonth = new Date(year, month, 0).getDate();
   const day = Math.floor(Math.random() * daysInMonth) + 1;

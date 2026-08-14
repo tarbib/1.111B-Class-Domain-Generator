@@ -1,6 +1,6 @@
 import { hunterMap, PRECOMPUTED_TYPES, RESULTS_PER_SECTION } from "./hunters.js";
 import { checkDomainStatus } from "./rdap.js";
-import { getTodayDateDomain, enumerateMonthDomains } from "./generators.js";
+import { getTodayDateDomain, enumerateMonthDomains, DATE_MIN_YEAR, DATE_MAX_YEAR } from "./generators.js";
 import {
   rowState,
   createFinalDomainHTML,
@@ -9,7 +9,9 @@ import {
   huntingDomainLabel,
   phoneCheckingHTML,
   createPhoneResultHTML,
-  calendarGridHTML,
+  calendarShellHTML,
+  calendarDaysHTML,
+  calendarMonthLabel,
   updateCalendarDayCell,
 } from "./render.js";
 
@@ -133,42 +135,79 @@ async function verifyPrecomputedRow(item, row, usedDomains) {
 }
 
 // --- CALENDAR (month view under the Date section) ---
-// Renders immediately using whatever the cron job already checked (fast,
-// same idea as the precomputed sections above). `precomputedCalendar` is
-// discarded if it's not actually for the current month/year -- a cron run
-// from just before a month boundary would otherwise mislabel every day.
-function renderCalendarSkeleton(precomputedCalendar) {
-  const container = document.getElementById("date-calendar");
-  if (!container) return null;
+// `calendarView` tracks whichever year/month is currently on screen, both to
+// drive the nav controls and as a guard: if the user navigates away while a
+// month's live checks are still trickling in, those checks stop touching the
+// DOM instead of writing into a grid that's no longer showing that month.
+// `calendarPrecomputed` is the cron job's cached calendar (see
+// scripts/precompute.mjs) -- only ever usable for its own year/month, since
+// it only ever covers "whichever month the cron last ran in".
+let calendarView = null;
+let calendarPrecomputed = null;
 
+function shiftCalendarMonth(delta) {
+  if (!calendarView) return;
+  let { year, month } = calendarView;
+  month += delta;
+  if (month < 1) {
+    month = 12;
+    year -= 1;
+  } else if (month > 12) {
+    month = 1;
+    year += 1;
+  }
+  if (year < DATE_MIN_YEAR || year > DATE_MAX_YEAR) return; // clamp at the picker's range
+  loadCalendarMonth(year, month);
+}
+
+// Renders the static shell (nav arrows, year picker, "Today" button) once --
+// only #calendar-days gets replaced on every subsequent month change, so
+// these controls and their listeners don't need re-attaching each time.
+function initCalendarShell(year) {
+  const container = document.getElementById("date-calendar");
+  if (!container) return false;
+  container.innerHTML = calendarShellHTML(year, DATE_MIN_YEAR, DATE_MAX_YEAR);
+  document.getElementById("calendar-prev").addEventListener("click", () => shiftCalendarMonth(-1));
+  document.getElementById("calendar-next").addEventListener("click", () => shiftCalendarMonth(1));
+  document.getElementById("calendar-year-select").addEventListener("change", (event) => {
+    if (calendarView) loadCalendarMonth(Number(event.target.value), calendarView.month);
+  });
+  document.getElementById("calendar-today").addEventListener("click", () => {
+    const now = new Date();
+    loadCalendarMonth(now.getFullYear(), now.getMonth() + 1);
+  });
+  return true;
+}
+
+// Renders `year`/`month`'s grid from precomputed data where available (only
+// ever the cron's own month), then live-checks the rest -- each cell pulses
+// "pending" until its own check resolves, so it's visibly loading rather
+// than looking stuck.
+async function loadCalendarMonth(year, month) {
+  const daysContainer = document.getElementById("calendar-days");
+  if (!daysContainer) return;
+
+  calendarView = { year, month };
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const today = now.getDate();
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const todayDay = isCurrentMonth ? now.getDate() : -1;
   const days = enumerateMonthDomains(year, month);
 
   const statusByDay = new Map();
-  if (precomputedCalendar && precomputedCalendar.year === year && precomputedCalendar.month === month) {
-    for (const d of precomputedCalendar.days) statusByDay.set(d.day, d.status);
+  if (isCurrentMonth && calendarPrecomputed?.year === year && calendarPrecomputed?.month === month) {
+    for (const d of calendarPrecomputed.days) statusByDay.set(d.day, d.status);
   }
 
-  container.innerHTML = calendarGridHTML(year, month, days, statusByDay, today);
-  return { days, statusByDay, today };
-}
+  document.getElementById("calendar-month-label").textContent = calendarMonthLabel(year, month);
+  document.getElementById("calendar-year-select").value = String(year);
+  daysContainer.innerHTML = calendarDaysHTML(year, month, days, statusByDay, todayDay);
 
-// Live-checks whatever days the precomputed calendar didn't cover. Run after
-// the main hunts below for the same reason verifyPrecomputedRow is deferred:
-// shares the same rate-limited RDAP queue as the "Hunting..." rows users are
-// actively watching.
-async function fillMissingCalendarDays(calendarState) {
-  if (!calendarState) return;
-  const container = document.getElementById("date-calendar");
-  if (!container) return;
-  const { days, statusByDay, today } = calendarState;
   for (const { day, domain } of days) {
     if (statusByDay.has(day)) continue;
+    if (calendarView.year !== year || calendarView.month !== month) return; // navigated away
     const status = await checkDomainStatus(domain);
-    updateCalendarDayCell(container, day, domain, status, day === today);
+    if (calendarView.year !== year || calendarView.month !== month) return; // navigated away mid-check
+    updateCalendarDayCell(daysContainer, day, domain, status, day === todayDay);
   }
 }
 
@@ -197,10 +236,7 @@ async function generateAndCheck() {
   // it's a same-origin static file with no RDAP throttle, so it resolves
   // well before the first live hunt below even completes.
   const { sections: precomputedSections, calendar: precomputedCalendar } = await fetchPrecomputedData();
-
-  // Renders immediately from precomputed data (or "pending" if unavailable) --
-  // the live fallback for any gaps runs later, after the queue below.
-  const calendarState = renderCalendarSkeleton(precomputedCalendar);
+  calendarPrecomputed = precomputedCalendar;
 
   // Seeded with every domain already rendered from precomputed data -- without
   // this, a live hunt (or a re-hunt below) filling in a row could land on a
@@ -224,6 +260,14 @@ async function generateAndCheck() {
     const todayStatus = await checkDomainStatus(todayDomainObj.domain);
     const rowElement = document.getElementById(todayItem.id);
     if (rowElement) rowElement.outerHTML = createFinalDomainHTML(todayDomainObj, todayStatus, todayItem.id);
+  }
+
+  // Loaded now, ahead of the per-section hunts below, so the calendar gets a
+  // real answer quickly instead of sitting on a "pending" pulse for however
+  // long the rest of the page's ~50 other checks take.
+  const now = new Date();
+  if (initCalendarShell(now.getFullYear())) {
+    await loadCalendarMonth(now.getFullYear(), now.getMonth() + 1);
   }
 
   const liveItems = [];
@@ -265,16 +309,12 @@ async function generateAndCheck() {
   btn.disabled = false;
   btn.innerText = "✨ Generate & Check Availability";
 
-  // Re-verify precomputed rows and fill in any calendar days precompute
-  // didn't cover only now that every still-empty slot above has already been
-  // filled -- these all share the same rate-limited RDAP queue (see rdap.js),
-  // so starting them earlier would delay the live hunts users are actively
-  // watching a spinner for, behind background work on content that already
-  // shows a reasonable answer.
-  await Promise.all([
-    ...toVerify.map(({ item, row }) => verifyPrecomputedRow(item, row, usedDomains)),
-    fillMissingCalendarDays(calendarState),
-  ]);
+  // Re-verify precomputed rows only now that every still-empty slot above has
+  // already been filled -- these share the same rate-limited RDAP queue (see
+  // rdap.js), so starting them earlier would delay the live hunts users are
+  // actively watching a spinner for, behind background checks on rows that
+  // already show a reasonable answer.
+  await Promise.all(toVerify.map(({ item, row }) => verifyPrecomputedRow(item, row, usedDomains)));
 }
 
 function handleDelegatedClick(event) {
