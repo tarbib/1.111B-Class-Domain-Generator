@@ -13,22 +13,48 @@ import Footer from "../components/Footer.astro";
       <div class="col-lg-8 col-xl-7">
         <div class="text-center mb-4">
           <h1 class="display-6 fw-bold">1.111B Class Domain Generator</h1>
-          <p class="text-secondary">Discover &amp; register rare numeric .xyz domains.</p>
+          <p class="text-secondary mb-1">Discover &amp; register rare numeric .xyz domains — pure digits, no letters.</p>
+          <p class="text-secondary small">
+            .xyz is one of the cheapest TLDs available, and unlike a lot of registrars' "premium" numeric domains,
+            these register at the standard base price — no markup just for being all digits.
+          </p>
         </div>
 
         <div class="d-grid mb-5">
           <button id="generate-btn" class="btn btn-primary btn-lg">✨ Generate &amp; Check Availability</button>
         </div>
 
+        <section class="mb-5">
+          <h6 class="text-uppercase text-secondary fw-bold mb-1">📱 Try your phone number?</h6>
+          <p class="text-secondary small fst-italic mb-3">
+            Strip the dashes and see if your own number is still free as a .xyz domain.
+          </p>
+          <form id="phone-form" class="input-group mb-2">
+            <input
+              type="tel"
+              id="phone-input"
+              class="form-control font-monospace"
+              placeholder="e.g. 0612345678"
+              inputmode="tel"
+              autocomplete="tel"
+            />
+            <button type="submit" class="btn btn-primary">Check availability</button>
+          </form>
+          <div class="list-group" id="phone-list"></div>
+        </section>
+
         <DomainSection icon="🎲" label="Random" listId="random-list" />
         <DomainSection icon="⭐" label="Iconic" listId="iconic-list" />
-        <DomainSection icon="🧮" label="Prime" listId="prime-list" />
-        <DomainSection icon="⚖️" label="Even / Odd" listId="evenodd-list" />
         <DomainSection icon="⭕" label="Round" listId="round-list" />
         <DomainSection icon="🔁" label="Palindrome" listId="palindrome-list" />
         <DomainSection icon="📅" label="Date" listId="date-list" />
         <DomainSection icon="👼" label="Angel" listId="angel-list" />
-        <DomainSection icon="🤖" label="Binary" listId="binary-list" />
+        <DomainSection
+          icon="🤖"
+          label="Binary"
+          listId="binary-list"
+          description="Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands."
+        />
         <DomainSection icon="🔢" label="Sequential" listId="sequential-list" />
         <DomainSection icon="🎯" label="Triples" listId="triples-list" />
         <DomainSection icon="👯" label="Pairs" listId="pairs-list" />

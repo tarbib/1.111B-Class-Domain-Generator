@@ -8,10 +8,24 @@ const RDAP_MIN_INTERVAL_MS = 350;
 const RDAP_TIMEOUT_MS = 8000;
 let rdapChain = Promise.resolve();
 
+// Caches settled ('available'/'taken') results for the life of the page/
+// process. Hunts for small-pool types (Repeater, Solid, ...) call
+// checkDomainStatus on overlapping candidates across separate hunt() calls --
+// without this, each call re-queries the registry (and re-pays the
+// RDAP_MIN_INTERVAL_MS spacing) for domains already known. 'unknown' is never
+// cached so the "Retry" button and later hunt attempts always get a fresh
+// network attempt for those.
+const statusCache = new Map();
+
 export function checkDomainStatus(domain) {
+  const cached = statusCache.get(domain);
+  if (cached) return Promise.resolve(cached);
   const run = rdapChain.then(() => performRdapLookup(domain));
   rdapChain = run.then(() => sleep(RDAP_MIN_INTERVAL_MS));
-  return run;
+  return run.then((status) => {
+    if (status !== "unknown") statusCache.set(domain, status);
+    return status;
+  });
 }
 
 // Returns 'available' | 'taken' | 'unknown'. Retries 429s with backoff and

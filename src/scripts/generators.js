@@ -57,62 +57,47 @@ export function generateTriples() {
   return { domain: d1.toString().repeat(firstRunLen) + d2.toString().repeat(length - firstRunLen), type: "Triples" };
 }
 
-export function generateRepeaterPattern() {
-  // Repeat the whole block an exact integer number of times (e.g. 135135)
-  // instead of cutting into a partial repeat at the end (e.g. 1351351).
-  const sequences = ["12", "98", "69", "24", "75", "123", "456", "789", "987", "654", "321", "135", "246"];
-  const seq = sequences[Math.floor(Math.random() * sequences.length)];
-  const minRepeats = Math.ceil(6 / seq.length);
-  const maxRepeats = Math.floor(9 / seq.length);
-  const repeats = Math.floor(Math.random() * (maxRepeats - minRepeats + 1)) + minRepeats;
-  const domain = seq.repeat(repeats);
-  return { domain, type: "Repeater" };
+const REPEATER_SEQUENCES = ["12", "98", "69", "24", "75", "123", "456", "789", "987", "654", "321", "135", "246"];
+
+// Repeater has only ~26 possible values total (13 sequences x their valid
+// repeat counts), same class of problem as Solid below -- small enough to
+// check every single one instead of random-sampling, which is what let the
+// same domain (e.g. "789789") get hunted -- and shown -- twice: random
+// sampling has no memory of what it already produced across separate hunt()
+// calls, an enumerated pool can't repeat a candidate that's already spoken for.
+export function enumerateRepeaterDomains() {
+  const domains = [];
+  for (const seq of REPEATER_SEQUENCES) {
+    const minRepeats = Math.ceil(6 / seq.length);
+    const maxRepeats = Math.floor(9 / seq.length);
+    for (let repeats = minRepeats; repeats <= maxRepeats; repeats++) {
+      domains.push({ domain: seq.repeat(repeats), type: "Repeater" });
+    }
+  }
+  return domains;
 }
 
-export function generatePairs() {
-  // Same ascending/descending walk as Sequential, but each digit is doubled
-  // (11-22-33-...) — the "AABB ladder" shape common in vanity phone numbers.
-  // Length is forced even so every pair lands whole instead of getting
-  // chopped in half at the end.
-  let length = getLength();
-  if (length % 2 !== 0) length -= 1;
-  const pairCount = length / 2;
-  const start = Math.floor(Math.random() * 9) + 1;
-  const isAscending = Math.random() > 0.5;
-  let domain = "";
-  for (let i = 0; i < pairCount; i++) {
-    let digit = isAscending ? (start + i) % 10 : (start - i) % 10;
-    if (digit < 0) digit += 10;
-    domain += digit.toString().repeat(2);
+// Pairs has only ~36 possible values (9 starting digits x 2 directions x 2
+// lengths) -- same reasoning as Repeater/Solid, enumerate instead of sample.
+export function enumeratePairsDomains() {
+  const domains = [];
+  for (const pairCount of [3, 4]) {
+    for (let start = 1; start <= 9; start++) {
+      for (const isAscending of [true, false]) {
+        let domain = "";
+        for (let i = 0; i < pairCount; i++) {
+          let digit = isAscending ? (start + i) % 10 : (start - i) % 10;
+          if (digit < 0) digit += 10;
+          domain += digit.toString().repeat(2);
+        }
+        domains.push({ domain, type: "Pairs" });
+      }
+    }
   }
-  return { domain, type: "Pairs" };
+  return domains;
 }
 
 // --- PREMIUM GENERATORS (categories that carry real cultural/numerical value) ---
-export function isPrime(num) {
-  for (let i = 2, s = Math.sqrt(num); i <= s; i++) if (num % i === 0) return false;
-  return num > 1;
-}
-
-export function generatePrime() {
-  const length = getLength();
-  const min = Math.pow(10, length - 1);
-  const max = Math.pow(10, length) - 1;
-  let candidate = Math.floor(Math.random() * (max - min + 1)) + min;
-  if (candidate % 2 === 0) candidate++;
-  while (!isPrime(candidate)) {
-    candidate += 2;
-    // Stay within the intended digit length instead of overflowing into length+1.
-    if (candidate > max) candidate = min + 1;
-  }
-  const domain = candidate.toString();
-  return {
-    domain,
-    type: "Prime",
-    reason: `${domain} is prime — no factors besides 1 and itself, a mathematically unique identity prized by tech, crypto and math-driven brands.`,
-  };
-}
-
 export function generateRound() {
   const length = getLength();
   // Always leaves at least 1 lead digit and at least 3 trailing zeros.
@@ -159,11 +144,13 @@ const ICONIC_NUMBERS = [
 export function generateIconic() {
   // Pads on only one side (never split around both), so the icon always
   // reads as a clean, unbroken block at one edge of the domain instead of
-  // getting buried in the middle behind random filler digits.
+  // getting buried in the middle. Padding is all zeros rather than random
+  // noise -- random filler digits drowned out the icon itself (e.g. "420"
+  // buried inside "42078234" isn't memorable anymore), while zeros stay
+  // silent and let the icon read cleanly regardless of position.
   const length = getLength();
   const icon = ICONIC_NUMBERS[Math.floor(Math.random() * ICONIC_NUMBERS.length)];
-  let padding = "";
-  for (let i = 0; i < length - icon.value.length; i++) padding += randDigit();
+  const padding = "0".repeat(length - icon.value.length);
   const domain = Math.random() > 0.5 ? icon.value + padding : padding + icon.value;
   return { domain, type: "Iconic", reason: icon.reason };
 }
@@ -187,7 +174,13 @@ const ANGEL_TRIPLETS = Object.keys(ANGEL_MEANINGS);
 // "111111"), which is indistinguishable from what Solid already generates.
 export function generateAngel() {
   const length = getLength();
-  const blockCount = Math.ceil(length / 3);
+  // Only ever join *whole* triplets (floor, not ceil) -- ceil + slice used to
+  // cut the last block in half (e.g. length 8 -> 777+666+999 sliced to
+  // "77766699", which visibly drops the trailing "9" while the reason text
+  // still credited the domain with a full "999"). Flooring means the domain
+  // is always blockCount*3 <= length, so every triplet named in the reason
+  // is fully present in the domain.
+  const blockCount = Math.floor(length / 3);
   const triplets = [];
   for (let i = 0; i < blockCount; i++) {
     let triplet;
@@ -196,7 +189,7 @@ export function generateAngel() {
     } while (triplet === triplets[i - 1]);
     triplets.push(triplet);
   }
-  const domain = triplets.join("").slice(0, length);
+  const domain = triplets.join("");
   const meanings = [...new Set(triplets)].map((t) => `${t} (${ANGEL_MEANINGS[t]})`).join(" + ");
   return {
     domain,
@@ -205,31 +198,15 @@ export function generateAngel() {
   };
 }
 
+// Reason is identical for every Binary result (there's nothing per-domain to
+// say), so it's shown once in the section header (see index.astro) instead
+// of repeated under every row.
 export function generateBinary() {
   const length = getLength();
   let num = "";
   for (let i = 0; i < length; i++) num += Math.floor(Math.random() * 2);
   if (/^0+$/.test(num)) num = "1" + num.slice(1);
-  return {
-    domain: num,
-    type: "Binary",
-    reason: `Made up of only 0s and 1s — reads like binary code, a natural fit for tech, software and AI brands.`,
-  };
-}
-
-export function generateEvenOdd() {
-  const length = getLength();
-  const isEven = Math.random() > 0.5;
-  const digits = isEven ? ["0", "2", "4", "6", "8"] : ["1", "3", "5", "7", "9"];
-  let domain = "";
-  for (let i = 0; i < length; i++) domain += digits[Math.floor(Math.random() * digits.length)];
-  // type stays fixed ("EvenOdd") regardless of which parity got picked, so
-  // hunterMap/refresh lookups (keyed by type) keep working either way.
-  return {
-    domain,
-    type: "EvenOdd",
-    reason: `Every digit is ${isEven ? "even" : "odd"} — a clean, consistent digit pattern that's easy to say and remember.`,
-  };
+  return { domain: num, type: "Binary" };
 }
 
 // --- RANDOM ---

@@ -3,12 +3,14 @@ interface Props {
   icon: string;
   label: string;
   listId: string;
+  description?: string;
 }
 
-const { icon, label, listId } = Astro.props;
+const { icon, label, listId, description } = Astro.props;
 ---
 
 <section class="mb-5">
-  <h6 class="text-uppercase text-secondary fw-bold mb-3">{icon} {label}</h6>
+  <h6 class={`text-uppercase text-secondary fw-bold ${description ? "mb-1" : "mb-3"}`}>{icon} {label}</h6>
+  {description && <p class="text-secondary small fst-italic mb-3">{description}</p>}
   <div class="list-group" id={listId}></div>
 </section>

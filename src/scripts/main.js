@@ -6,6 +6,8 @@ import {
   placeholderRowHTML,
   checkingButtonHTML,
   huntingDomainLabel,
+  phoneCheckingHTML,
+  createPhoneResultHTML,
 } from "./render.js";
 
 // One section per pattern type, 5 rows each, ordered by the size of each
@@ -16,8 +18,6 @@ import {
 export const SECTION_TYPES = [
   "Random", // ~1,111,000,000 candidates
   "Iconic", // ~57,772,000
-  "Prime", // ~50,837,942
-  "EvenOdd", // ~4,875,000
   "Round", // ~1,110,996
   "Palindrome", // ~121,000
   "Date", // ~54,787 (valid DDMMYYYY calendar dates, 1950-2099)
@@ -68,7 +68,10 @@ async function recheckStatus(id) {
   const status = await checkDomainStatus(state.domainObj.domain);
   const updatedRow = document.getElementById(id);
   if (updatedRow) {
-    updatedRow.outerHTML = createFinalDomainHTML(state.domainObj, status, id);
+    updatedRow.outerHTML =
+      state.domainObj.type === "Phone"
+        ? createPhoneResultHTML(state.domainObj.domain, status, id)
+        : createFinalDomainHTML(state.domainObj, status, id);
   }
 }
 
@@ -92,9 +95,38 @@ async function refreshRow(id) {
   });
 
   const updatedRow = document.getElementById(id);
-  if (updatedRow) {
+  if (updatedRow && domainObj) {
     updatedRow.outerHTML = createFinalDomainHTML(domainObj, status, id);
   }
+}
+
+// A precomputed "available" row could be stale by the time a visitor loads
+// the page -- the cron job (scripts/precompute.mjs) may have run hours ago,
+// and someone else may have registered it since. Fired right after the row
+// renders, without blocking the rest of the page: silently re-checks it, and
+// if it's no longer available, hunts a fresh replacement for that same slot
+// instead of leaving a broken "Available" on screen.
+async function verifyPrecomputedRow(item, row, usedDomains) {
+  const status = await checkDomainStatus(row.domain);
+  if (status === "available") return;
+
+  const rowElement = document.getElementById(item.id);
+  if (!rowElement) return;
+  const domainNameSpan = rowElement.querySelector(".domain-name");
+  const actionBtn = rowElement.querySelector(".action-btn");
+  if (actionBtn) actionBtn.outerHTML = checkingButtonHTML("Re-hunting...");
+
+  const hunt = hunterMap[item.type];
+  const { domainObj, status: newStatus } = await hunt(usedDomains, (obj, attempts) => {
+    if (domainNameSpan) domainNameSpan.innerHTML = huntingDomainLabel(obj.domain, attempts);
+  });
+
+  const freshRow = document.getElementById(item.id);
+  if (!freshRow) return;
+  // Nothing new left in this type's pool this session (every other row
+  // already claimed it) -- drop the row rather than re-showing a duplicate.
+  if (domainObj) freshRow.outerHTML = createFinalDomainHTML(domainObj, newStatus, item.id);
+  else freshRow.remove();
 }
 
 // --- MAIN GENERATOR LOOP ---
@@ -123,7 +155,19 @@ async function generateAndCheck() {
   // well before the first live hunt below even completes.
   const precomputedSections = await fetchPrecomputedData();
 
+  // Seeded with every domain already rendered from precomputed data -- without
+  // this, a live hunt (or a re-hunt below) filling in a row could land on a
+  // domain already shown a few rows up in the same section (this is how
+  // "789789.xyz" ended up listed twice under Repeater).
+  const usedDomains = new Set();
+  if (precomputedSections) {
+    for (const rows of Object.values(precomputedSections)) {
+      for (const row of rows) usedDomains.add(row.domain);
+    }
+  }
+
   const liveItems = [];
+  const toVerify = [];
   for (const item of items) {
     if (!PRECOMPUTED_TYPES.includes(item.type)) {
       liveItems.push(item);
@@ -133,6 +177,7 @@ async function generateAndCheck() {
     if (row) {
       const rowElement = document.getElementById(item.id);
       if (rowElement) rowElement.outerHTML = createFinalDomainHTML(row, row.status, item.id);
+      if (row.status === "available") toVerify.push({ item, row });
     } else {
       // Missing/incomplete precomputed data for this row -- hunt it live instead.
       liveItems.push(item);
@@ -141,7 +186,6 @@ async function generateAndCheck() {
 
   // Hunt sequentially per row; checkDomainStatus already serializes actual
   // network calls, so this keeps UI updates predictable without adding delay.
-  const usedDomains = new Set();
   for (const item of liveItems) {
     const rowElement = document.getElementById(item.id);
     const domainNameSpan = rowElement.querySelector(".domain-name");
@@ -149,11 +193,23 @@ async function generateAndCheck() {
       domainNameSpan.innerHTML = huntingDomainLabel(obj.domain, attempts);
     });
     const freshRow = document.getElementById(item.id);
-    if (freshRow) freshRow.outerHTML = createFinalDomainHTML(domainObj, status, item.id);
+    if (!freshRow) continue;
+    // Nothing new left in this type's small pool (every candidate is already
+    // shown by an earlier row or precomputed) -- drop the row instead of
+    // re-showing a duplicate of one already on the page.
+    if (domainObj) freshRow.outerHTML = createFinalDomainHTML(domainObj, status, item.id);
+    else freshRow.remove();
   }
 
   btn.disabled = false;
   btn.innerText = "✨ Generate & Check Availability";
+
+  // Re-verify precomputed rows only now that every still-empty slot above has
+  // already been filled -- these calls share the same rate-limited RDAP queue
+  // (see rdap.js), so starting them earlier would delay the live hunts users
+  // are actively watching a spinner for, behind background checks on rows
+  // that already show a reasonable answer.
+  await Promise.all(toVerify.map(({ item, row }) => verifyPrecomputedRow(item, row, usedDomains)));
 }
 
 function handleDelegatedClick(event) {
@@ -164,6 +220,27 @@ function handleDelegatedClick(event) {
   else if (action === "recheck") recheckStatus(id);
 }
 
+// --- "TRY YOUR PHONE NUMBER?" LOOKUP ---
+const PHONE_RESULT_ID = "phone-result";
+
+async function handlePhoneSubmit(event) {
+  event.preventDefault();
+  const input = document.getElementById("phone-input");
+  const digits = input.value.replace(/\D/g, "");
+  const list = document.getElementById("phone-list");
+  if (!digits) return;
+
+  const submitBtn = event.target.querySelector("button[type=submit]");
+  submitBtn.disabled = true;
+  list.innerHTML = phoneCheckingHTML(digits, PHONE_RESULT_ID);
+
+  const status = await checkDomainStatus(digits);
+  const row = document.getElementById(PHONE_RESULT_ID);
+  if (row) row.outerHTML = createPhoneResultHTML(digits, status, PHONE_RESULT_ID);
+  submitBtn.disabled = false;
+}
+
 document.addEventListener("click", handleDelegatedClick);
 document.getElementById("generate-btn").addEventListener("click", generateAndCheck);
+document.getElementById("phone-form").addEventListener("submit", handlePhoneSubmit);
 generateAndCheck();
