@@ -32,13 +32,16 @@ const UNKNOWN_RATIO_ABORT_THRESHOLD = 0.5;
 // which doesn't consume a row and needs a follow-up hunt() call to replace.
 const HUNT_CALLS_PER_TYPE = RESULTS_PER_SECTION * 3;
 
-// Every whole calendar month touched by "today through 365 days from today"
-// -- e.g. today Aug 14 2026 -> Aug 2026 .. Aug 2027, 13 months. Whole months
-// (not just the remaining days of the current one) so each is a complete,
-// independently-navigable grid for the calendar view's month nav.
-function monthsForFullYearAhead() {
-  const start = new Date();
-  const end = new Date(start);
+// Every whole calendar month touched by "one year before today through one
+// year after today" -- e.g. today Aug 14 2026 -> Aug 2025 .. Aug 2027, 25
+// months. Whole months (not just the remaining/elapsed days of the boundary
+// ones) so each is a complete, independently-navigable grid for the calendar
+// view's month nav in both directions.
+function monthsForYearWindow() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - 365);
+  const end = new Date(now);
   end.setDate(end.getDate() + 365);
 
   const months = [];
@@ -58,15 +61,15 @@ function monthsForFullYearAhead() {
 }
 
 // Checks every day of every month in that range once each, for the Date
-// section's calendar view -- lets a visitor page forward through an entire
-// year without the client ever needing to fall back to a live per-day check.
-// A given day's domain is fixed and there's nothing to search for, so this
-// is a plain full sweep rather than a "hunt".
+// section's calendar view -- lets a visitor page a year forward or back
+// without the client ever needing to fall back to a live per-day check. A
+// given day's domain is fixed and there's nothing to search for, so this is
+// a plain full sweep rather than a "hunt".
 async function buildCalendar() {
   let checks = 0;
   let unknown = 0;
   const months = [];
-  for (const { year, month } of monthsForFullYearAhead()) {
+  for (const { year, month } of monthsForYearWindow()) {
     const days = [];
     for (const { day, domain } of enumerateMonthDomains(year, month)) {
       const status = await checkDomainStatus(domain);
