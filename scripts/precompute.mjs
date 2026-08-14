@@ -22,14 +22,20 @@ const OUTPUT_PATH = join(__dirname, "..", "public", "data", "precomputed.json");
 // worse than leaving the last published data in place.
 const UNKNOWN_RATIO_ABORT_THRESHOLD = 0.5;
 
-// Per type, keep calling hunt() until RESULTS_PER_SECTION rows are collected
-// or this many hunt() calls have been made -- whichever comes first. Every
-// settled (available or taken) result gets written, not just available ones
-// -- see main loop below -- so a section only ends up with fewer than
-// RESULTS_PER_SECTION rows if the pattern's entire candidate pool is smaller
-// than that (rare: Solid/Pairs/Repeater are the smallest at ~26-36). The 3x
-// multiplier is headroom for the occasional 'unknown' (network hiccup) result,
-// which doesn't consume a row and needs a follow-up hunt() call to replace.
+// Per type, keep calling hunt() until RESULTS_PER_SECTION available domains
+// are found or this many hunt() calls have been made -- whichever comes
+// first. Only "available" results are ever written (see main loop below):
+// the goal is to surface domains worth registering, not to pad a section out
+// to 5 with ones that are already taken, so a type can end up with fewer than
+// RESULTS_PER_SECTION rows -- or none -- if its pattern is mostly/fully
+// registered (this is expected for the smallest pools, Solid/Pairs/Repeater
+// at ~26-36 candidates total; main.js already treats a missing row as "hunt
+// this one live" with zero extra code needed). The 3x multiplier gives
+// randomly-sampled pools a real shot at finding available domains a single
+// capped huntForAvailable call might statistically miss; for exhaustive pools
+// each hunt() call finds at most one *new* available domain (or proves there
+// are none left), so this is what lets a pool with several free domains
+// surface more than just the first one found.
 const HUNT_CALLS_PER_TYPE = RESULTS_PER_SECTION * 3;
 
 // Every whole calendar month touched by "one year before today through one
@@ -107,19 +113,16 @@ async function main() {
       });
       totalChecks++;
       if (status === "unknown") unknownChecks++;
-      else if (domainObj) rows.push({ ...domainObj, status });
-      else break; // pool fully claimed -- no new candidate left, more calls won't help
+      else if (status === "available" && domainObj) rows.push({ ...domainObj, status });
+      else if (!domainObj) break; // pool fully claimed -- no new candidate left, more calls won't help
+      // status === "taken": not written, but domainObj is now marked used
+      // (see hunt.js) so the next hunt() call moves on to a fresh candidate
+      // instead of re-finding the same taken one.
     }
-    // Available results first (the actually useful ones), taken examples
-    // filling out the rest -- so a mostly-registered pattern (e.g. Repeater
-    // most days) still shows 5 real, distinct results instead of quietly
-    // shrinking the section.
-    rows.sort((a, b) => (a.status === "available" ? 0 : 1) - (b.status === "available" ? 0 : 1));
     sections[type.toLowerCase()] = rows;
-    const availableCount = rows.filter((r) => r.status === "available").length;
     console.log(
-      `[${type}] ${availableCount}/${RESULTS_PER_SECTION} available, ${rows.length}/${RESULTS_PER_SECTION} total after ${huntCalls} hunt(s): ` +
-        rows.map((r) => `${r.domain}(${r.status})`).join(", "),
+      `[${type}] ${rows.length}/${RESULTS_PER_SECTION} available after ${huntCalls} hunt(s): ` +
+        rows.map((r) => r.domain).join(", "),
     );
   }
 

@@ -11,6 +11,14 @@ permissions:
 jobs:
   precompute:
     runs-on: ubuntu-latest
+    # Hard ceiling in case the registry starts stalling/rate-limiting hard
+    # (rdap.js retries 429s with backoff) or something else hangs -- normal
+    # runs take well under this (every check is paced ~350ms apart, and the
+    # calendar + all precomputed types together are a few hundred checks).
+    # This repo is public, so Actions minutes themselves aren't billed/limited
+    # either way -- this is about keeping a stuck run from tying up the
+    # runner indefinitely, not about quota.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

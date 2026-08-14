@@ -214,6 +214,25 @@ async function loadCalendarMonth(year, month) {
   }
 }
 
+// If a section ended up with rows but none of them are "Available" (every
+// candidate this run turned up was already taken -- e.g. Repeater's whole
+// ~26-value pool is sometimes fully registered), append a plain-language
+// note explaining that instead of leaving a wall of grey "Taken" buttons to
+// speak for itself.
+// Idempotent -- safe to call again on a section that's already settled (see
+// generateAndCheck: called once right after the sections that had nothing
+// pending in the background-verify pass are done, and again at the very end
+// for the ones that did).
+function noteIfAllTaken(container) {
+  if (!container || container.children.length === 0) return;
+  if (container.querySelector(".btn-success")) return; // at least one available row
+  if (container.querySelector(".list-group-item-warning")) return; // already noted
+  container.insertAdjacentHTML(
+    "beforeend",
+    `<div class="list-group-item list-group-item-warning small">⚠️ Every combination checked here is already taken right now.</div>`,
+  );
+}
+
 // --- MAIN GENERATOR LOOP ---
 async function generateAndCheck() {
   const btn = document.getElementById("generate-btn");
@@ -318,12 +337,30 @@ async function generateAndCheck() {
   btn.disabled = false;
   btn.innerText = "✨ Generate & Check Availability";
 
+  // If every row that landed in a section turned out taken, a page full of
+  // grey "Taken" buttons reads as broken rather than "nothing free right
+  // now" -- add a one-line note per section instead of trying to hide it.
+  // Types with nothing pending in toVerify (e.g. Repeater, if precompute
+  // found zero available) are already fully settled at this point, so they
+  // get checked now rather than waiting on every other section's
+  // background re-verify below.
+  const typesAwaitingVerify = new Set(toVerify.map(({ item }) => item.type));
+  for (const type of SECTION_TYPES) {
+    if (!typesAwaitingVerify.has(type)) noteIfAllTaken(document.getElementById(`${type.toLowerCase()}-list`));
+  }
+
   // Re-verify precomputed rows only now that every still-empty slot above has
   // already been filled -- these share the same rate-limited RDAP queue (see
   // rdap.js), so starting them earlier would delay the live hunts users are
   // actively watching a spinner for, behind background checks on rows that
   // already show a reasonable answer.
   await Promise.all(toVerify.map(({ item, row }) => verifyPrecomputedRow(item, row, usedDomains)));
+
+  // Now check the remaining (verify-pending) sections too, now that their
+  // background re-verification has settled.
+  for (const type of typesAwaitingVerify) {
+    noteIfAllTaken(document.getElementById(`${type.toLowerCase()}-list`));
+  }
 }
 
 function handleDelegatedClick(event) {
