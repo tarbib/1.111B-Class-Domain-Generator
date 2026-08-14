@@ -103,3 +103,64 @@ export function createPhoneResultHTML(digits, status, id) {
 export function huntingDomainLabel(domain, attempts) {
   return `${domain}<span class="text-secondary">.xyz</span> <span class="text-secondary small">(try ${attempts})</span>`;
 }
+
+// --- CALENDAR (month view under the Date section) ---
+const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// status: null while still checking (precomputed data missing/stale for this day)
+function calendarDayCellHTML(day, domain, status, isToday) {
+  const stateClass =
+    status === "available"
+      ? "calendar-day-available"
+      : status === "taken"
+        ? "calendar-day-taken"
+        : status === "unknown"
+          ? "calendar-day-unknown"
+          : "calendar-day-pending";
+  const label =
+    status === "available" ? "Available" : status === "taken" ? "Taken" : status === "unknown" ? "Unknown" : "Checking…";
+  const inner =
+    status === "available"
+      ? `<a href="https://porkbun.com/checkout/search?q=${domain}.xyz" target="_blank" rel="noopener" class="calendar-day-inner">${day}</a>`
+      : `<span class="calendar-day-inner">${day}</span>`;
+  return `<div class="calendar-day ${stateClass}${isToday ? " calendar-day-today" : ""}" data-day="${day}" title="${domain}.xyz — ${label}">${inner}</div>`;
+}
+
+// `days` is [{day, domain}, ...] for every day of the month (see
+// enumerateMonthDomains). `statusByDay` maps day -> status for whichever days
+// precomputed data already covers; the rest render as "pending" until
+// fillMissingCalendarDays (main.js) checks them live.
+export function calendarGridHTML(year, month, days, statusByDay, today) {
+  const firstWeekday = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Monday = 0
+  const emptyCells = Array.from({ length: firstWeekday }, () => `<div class="calendar-day calendar-day-empty"></div>`).join(
+    "",
+  );
+  const dayCells = days
+    .map(({ day, domain }) => calendarDayCellHTML(day, domain, statusByDay.get(day) ?? null, day === today))
+    .join("");
+  return `
+    <div class="calendar-month-label small fw-bold text-secondary mb-2">${MONTH_NAMES[month - 1]} ${year}</div>
+    <div class="calendar-weekdays">${WEEKDAY_LABELS.map((d) => `<span>${d}</span>`).join("")}</div>
+    <div class="calendar-days">${emptyCells}${dayCells}</div>
+  `;
+}
+
+// Swaps a single day cell (identified by data-day) into its resolved state.
+export function updateCalendarDayCell(container, day, domain, status, isToday) {
+  const cell = container.querySelector(`.calendar-day[data-day="${day}"]`);
+  if (cell) cell.outerHTML = calendarDayCellHTML(day, domain, status, isToday);
+}

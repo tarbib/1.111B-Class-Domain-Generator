@@ -1,5 +1,6 @@
 import { hunterMap, PRECOMPUTED_TYPES, RESULTS_PER_SECTION } from "./hunters.js";
 import { checkDomainStatus } from "./rdap.js";
+import { getTodayDateDomain, enumerateMonthDomains } from "./generators.js";
 import {
   rowState,
   createFinalDomainHTML,
@@ -8,6 +9,8 @@ import {
   huntingDomainLabel,
   phoneCheckingHTML,
   createPhoneResultHTML,
+  calendarGridHTML,
+  updateCalendarDayCell,
 } from "./render.js";
 
 // One section per pattern type, 5 rows each, ordered by the size of each
@@ -34,9 +37,9 @@ const PRECOMPUTED_DATA_URL = "/data/precomputed.json";
 const PRECOMPUTED_FETCH_TIMEOUT_MS = 5000;
 
 // Fetches the cron-generated dataset (see scripts/precompute.mjs). Never
-// throws -- returns null on any failure (missing file, timeout, bad JSON) so
-// callers fall back to live hunting for those sections instead of rendering
-// nothing.
+// throws -- returns nulls on any failure (missing file, timeout, bad JSON) so
+// callers fall back to live hunting/checking for those sections instead of
+// rendering nothing.
 async function fetchPrecomputedData() {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), PRECOMPUTED_FETCH_TIMEOUT_MS);
@@ -47,10 +50,10 @@ async function fetchPrecomputedData() {
     const response = await fetch(PRECOMPUTED_DATA_URL, { signal: controller.signal, cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const json = await response.json();
-    return json.sections ?? null;
+    return { sections: json.sections ?? null, calendar: json.calendar ?? null };
   } catch (error) {
     console.warn("Precomputed data unavailable, falling back to live hunting:", error);
-    return null;
+    return { sections: null, calendar: null };
   } finally {
     clearTimeout(timeoutId);
   }
@@ -129,6 +132,46 @@ async function verifyPrecomputedRow(item, row, usedDomains) {
   else freshRow.remove();
 }
 
+// --- CALENDAR (month view under the Date section) ---
+// Renders immediately using whatever the cron job already checked (fast,
+// same idea as the precomputed sections above). `precomputedCalendar` is
+// discarded if it's not actually for the current month/year -- a cron run
+// from just before a month boundary would otherwise mislabel every day.
+function renderCalendarSkeleton(precomputedCalendar) {
+  const container = document.getElementById("date-calendar");
+  if (!container) return null;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const today = now.getDate();
+  const days = enumerateMonthDomains(year, month);
+
+  const statusByDay = new Map();
+  if (precomputedCalendar && precomputedCalendar.year === year && precomputedCalendar.month === month) {
+    for (const d of precomputedCalendar.days) statusByDay.set(d.day, d.status);
+  }
+
+  container.innerHTML = calendarGridHTML(year, month, days, statusByDay, today);
+  return { days, statusByDay, today };
+}
+
+// Live-checks whatever days the precomputed calendar didn't cover. Run after
+// the main hunts below for the same reason verifyPrecomputedRow is deferred:
+// shares the same rate-limited RDAP queue as the "Hunting..." rows users are
+// actively watching.
+async function fillMissingCalendarDays(calendarState) {
+  if (!calendarState) return;
+  const container = document.getElementById("date-calendar");
+  if (!container) return;
+  const { days, statusByDay, today } = calendarState;
+  for (const { day, domain } of days) {
+    if (statusByDay.has(day)) continue;
+    const status = await checkDomainStatus(domain);
+    updateCalendarDayCell(container, day, domain, status, day === today);
+  }
+}
+
 // --- MAIN GENERATOR LOOP ---
 async function generateAndCheck() {
   const btn = document.getElementById("generate-btn");
@@ -153,7 +196,11 @@ async function generateAndCheck() {
   // Kick the precomputed-data fetch off in parallel with everything else --
   // it's a same-origin static file with no RDAP throttle, so it resolves
   // well before the first live hunt below even completes.
-  const precomputedSections = await fetchPrecomputedData();
+  const { sections: precomputedSections, calendar: precomputedCalendar } = await fetchPrecomputedData();
+
+  // Renders immediately from precomputed data (or "pending" if unavailable) --
+  // the live fallback for any gaps runs later, after the queue below.
+  const calendarState = renderCalendarSkeleton(precomputedCalendar);
 
   // Seeded with every domain already rendered from precomputed data -- without
   // this, a live hunt (or a re-hunt below) filling in a row could land on a
@@ -166,9 +213,23 @@ async function generateAndCheck() {
     }
   }
 
+  // The Date section's first row is always today's exact date rather than a
+  // random pick from generateDate's ~54,787 possible ones -- checked directly
+  // (there's nothing to "hunt" for, it's one specific domain) so it renders
+  // before the rest of the section's random picks.
+  const todayDomainObj = getTodayDateDomain();
+  usedDomains.add(todayDomainObj.domain);
+  const todayItem = items.find((item) => item.type === "Date" && item.indexInType === 0);
+  if (todayItem) {
+    const todayStatus = await checkDomainStatus(todayDomainObj.domain);
+    const rowElement = document.getElementById(todayItem.id);
+    if (rowElement) rowElement.outerHTML = createFinalDomainHTML(todayDomainObj, todayStatus, todayItem.id);
+  }
+
   const liveItems = [];
   const toVerify = [];
   for (const item of items) {
+    if (item === todayItem) continue;
     if (!PRECOMPUTED_TYPES.includes(item.type)) {
       liveItems.push(item);
       continue;
@@ -204,12 +265,16 @@ async function generateAndCheck() {
   btn.disabled = false;
   btn.innerText = "✨ Generate & Check Availability";
 
-  // Re-verify precomputed rows only now that every still-empty slot above has
-  // already been filled -- these calls share the same rate-limited RDAP queue
-  // (see rdap.js), so starting them earlier would delay the live hunts users
-  // are actively watching a spinner for, behind background checks on rows
-  // that already show a reasonable answer.
-  await Promise.all(toVerify.map(({ item, row }) => verifyPrecomputedRow(item, row, usedDomains)));
+  // Re-verify precomputed rows and fill in any calendar days precompute
+  // didn't cover only now that every still-empty slot above has already been
+  // filled -- these all share the same rate-limited RDAP queue (see rdap.js),
+  // so starting them earlier would delay the live hunts users are actively
+  // watching a spinner for, behind background work on content that already
+  // shows a reasonable answer.
+  await Promise.all([
+    ...toVerify.map(({ item, row }) => verifyPrecomputedRow(item, row, usedDomains)),
+    fillMissingCalendarDays(calendarState),
+  ]);
 }
 
 function handleDelegatedClick(event) {

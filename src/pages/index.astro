@@ -47,7 +47,14 @@ import Footer from "../components/Footer.astro";
         <DomainSection icon="⭐" label="Iconic" listId="iconic-list" />
         <DomainSection icon="⭕" label="Round" listId="round-list" />
         <DomainSection icon="🔁" label="Palindrome" listId="palindrome-list" />
-        <DomainSection icon="📅" label="Date" listId="date-list" />
+        <DomainSection
+          icon="📅"
+          label="Date"
+          listId="date-list"
+          description="First pick is always today's date. Below it, a month view of which calendar-date domains are still free."
+        >
+          <div id="date-calendar" class="mb-3"></div>
+        </DomainSection>
         <DomainSection icon="👼" label="Angel" listId="angel-list" />
         <DomainSection
           icon="🤖"

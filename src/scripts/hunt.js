@@ -19,13 +19,17 @@ export function shuffle(array) {
 // shared rate-limited queue) until one comes back available, or MAX_HUNT_ATTEMPTS
 // is hit. `usedDomains`, if given, is used to skip candidates already claimed by
 // another row in the same batch without spending an RDAP request on them, and
-// every candidate this call actually checks gets added to it too -- regardless
-// of status -- so a *different* row's exhausted search can't land on and
-// re-display the same already-taken domain this row just showed (small pools
-// like Repeater's ~26 values collide on this easily by chance otherwise). Also
-// skips exact repeats within this hunt for the same reason, one level down.
+// the domain this call finally settles on -- available or not -- gets added to
+// it too, so a *different* row can't land on and re-display that same domain
+// (small pools like Repeater's ~26 values collide on this easily by chance
+// otherwise). Only the final pick is recorded, not every candidate merely
+// glanced at along the way -- marking all of them would let the first row's
+// search vacuum up an entire small pool and starve every row after it, which
+// is worse: instead of 5 distinct results (available and/or taken), rows 2-5
+// would each find nothing new and disappear. Also skips exact repeats within
+// this hunt for the same reason, one level down.
 // Returns `domainObj: null` if every candidate this call could try was already
-// used up by an earlier row -- there's nothing new left to show.
+// claimed by an earlier row -- there's nothing new left in the pool to show.
 export async function huntForAvailable(generatorFn, usedDomains, onAttempt) {
   let status = "taken";
   let attempts = 0;
@@ -39,8 +43,8 @@ export async function huntForAvailable(generatorFn, usedDomains, onAttempt) {
     if (onAttempt) onAttempt(candidate, attempts);
     status = await checkDomainStatus(candidate.domain);
     domainObj = candidate;
-    if (usedDomains) usedDomains.add(candidate.domain);
   }
+  if (usedDomains && domainObj) usedDomains.add(domainObj.domain);
   return { domainObj, status };
 }
 
@@ -59,8 +63,8 @@ export async function huntExhaustive(candidates, usedDomains, onAttempt) {
     domainObj = candidate;
     if (onAttempt) onAttempt(domainObj, attempts);
     status = await checkDomainStatus(candidate.domain);
-    if (usedDomains) usedDomains.add(candidate.domain);
     if (status === "available") break;
   }
+  if (usedDomains && domainObj) usedDomains.add(domainObj.domain);
   return { domainObj, status };
 }

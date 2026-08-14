@@ -113,21 +113,53 @@ export function generateRound() {
   };
 }
 
+// Fixed DDMMYYYY shape (8 digits) instead of the variable 6-9 length used
+// elsewhere — a date only reads cleanly in its natural calendar format.
+// Shared by generateDate, getTodayDateDomain and enumerateMonthDomains so
+// all three always agree on exactly what string a given day maps to.
+function formatDateDomain(day, month, year) {
+  const dd = day.toString().padStart(2, "0");
+  const mm = month.toString().padStart(2, "0");
+  return { dd, mm, domain: `${dd}${mm}${year}` };
+}
+
 export function generateDate() {
-  // Fixed DDMMYYYY shape (8 digits) instead of the variable 6-9 length used
-  // elsewhere — a date only reads cleanly in its natural calendar format.
   const year = Math.floor(Math.random() * (2099 - 1950 + 1)) + 1950;
   const month = Math.floor(Math.random() * 12) + 1;
   const daysInMonth = new Date(year, month, 0).getDate();
   const day = Math.floor(Math.random() * daysInMonth) + 1;
-  const dd = day.toString().padStart(2, "0");
-  const mm = month.toString().padStart(2, "0");
-  const domain = `${dd}${mm}${year}`;
+  const { dd, mm, domain } = formatDateDomain(day, month, year);
   return {
     domain,
     type: "Date",
     reason: `Reads as ${dd}/${mm}/${year} — a real calendar date, great for birthdays, anniversaries or founding-date branding.`,
   };
+}
+
+// Today's exact date -- shown as the Date section's first result (see
+// main.js) instead of leaving it to random chance whether "today" ever comes
+// up among generateDate's ~54,787 possible dates.
+export function getTodayDateDomain() {
+  const now = new Date();
+  const { dd, mm, domain } = formatDateDomain(now.getDate(), now.getMonth() + 1, now.getFullYear());
+  return {
+    domain,
+    type: "Date",
+    reason: `Reads as ${dd}/${mm}/${now.getFullYear()} — today's date. A live, always-current pick for a launch-day or "founded on" domain.`,
+  };
+}
+
+// Every day in a given month (1-indexed month, 1-12) -- powers the calendar
+// view under the Date section. Reuses formatDateDomain so a calendar cell's
+// domain always matches exactly what generateDate/getTodayDateDomain would
+// produce for that same day.
+export function enumerateMonthDomains(year, month) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const domains = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    domains.push({ day, domain: formatDateDomain(day, month, year).domain, type: "Date" });
+  }
+  return domains;
 }
 
 const ICONIC_NUMBERS = [
