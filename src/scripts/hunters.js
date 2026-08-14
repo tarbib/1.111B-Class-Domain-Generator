@@ -43,8 +43,13 @@ export const hunterMap = {
 // -- single source of truth for which types get cron-precomputed, so the two
 // runtimes can never drift apart. Small-pool types (mostly already taken, so
 // every visitor would otherwise re-run a near-exhaustive hunt on every page
-// load) are precomputed; large-pool types find an available domain within a
-// couple of live attempts, so there's no benefit to precomputing them.
-export const PRECOMPUTED_TYPES = ["Angel", "Binary", "Sequential", "Triples", "Pairs", "Solid", "Repeater"];
+// load) are precomputed; large-pool types normally find an available domain
+// within a couple of live attempts, so precomputing them is mostly about
+// shaving that last bit of live RDAP latency off page load rather than
+// coverage. Date is the one large-pool type precomputed anyway: main.js
+// reserves its row 0 for today's exact date (always live -- there's nothing
+// to precompute about a date this specific), and fills rows 1-4 from here,
+// shifted down by one to account for that reserved slot.
+export const PRECOMPUTED_TYPES = ["Angel", "Binary", "Sequential", "Triples", "Pairs", "Solid", "Repeater", "Date"];
 
 export const RESULTS_PER_SECTION = 5;

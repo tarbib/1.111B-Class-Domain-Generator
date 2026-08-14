@@ -140,8 +140,10 @@ async function verifyPrecomputedRow(item, row, usedDomains) {
 // month's live checks are still trickling in, those checks stop touching the
 // DOM instead of writing into a grid that's no longer showing that month.
 // `calendarPrecomputed` is the cron job's cached calendar (see
-// scripts/precompute.mjs) -- only ever usable for its own year/month, since
-// it only ever covers "whichever month the cron last ran in".
+// scripts/precompute.mjs) -- a rolling year of months starting from whichever
+// day the cron last ran, so navigating up to a year ahead never needs a live
+// per-day check; anything outside that window (past months, or over a year
+// out) still falls back to checking live.
 let calendarView = null;
 let calendarPrecomputed = null;
 
@@ -179,10 +181,10 @@ function initCalendarShell(year) {
   return true;
 }
 
-// Renders `year`/`month`'s grid from precomputed data where available (only
-// ever the cron's own month), then live-checks the rest -- each cell pulses
-// "pending" until its own check resolves, so it's visibly loading rather
-// than looking stuck.
+// Renders `year`/`month`'s grid from precomputed data where available (any
+// month in the cron's rolling year-ahead window), then live-checks whatever
+// isn't -- each cell pulses "pending" until its own check resolves, so it's
+// visibly loading rather than looking stuck.
 async function loadCalendarMonth(year, month) {
   const daysContainer = document.getElementById("calendar-days");
   if (!daysContainer) return;
@@ -194,8 +196,9 @@ async function loadCalendarMonth(year, month) {
   const days = enumerateMonthDomains(year, month);
 
   const statusByDay = new Map();
-  if (isCurrentMonth && calendarPrecomputed?.year === year && calendarPrecomputed?.month === month) {
-    for (const d of calendarPrecomputed.days) statusByDay.set(d.day, d.status);
+  const precomputedMonth = calendarPrecomputed?.months?.find((m) => m.year === year && m.month === month);
+  if (precomputedMonth) {
+    for (const d of precomputedMonth.days) statusByDay.set(d.day, d.status);
   }
 
   document.getElementById("calendar-month-label").textContent = calendarMonthLabel(year, month);
@@ -278,8 +281,14 @@ async function generateAndCheck() {
       liveItems.push(item);
       continue;
     }
-    const row = precomputedSections?.[item.type.toLowerCase()]?.[item.indexInType];
-    if (row) {
+    // Date's precomputed pool has no concept of "today" (row 0, handled
+    // above) -- shift down by one so it fills rows 1-4 instead.
+    const precomputedIndex = item.type === "Date" ? item.indexInType - 1 : item.indexInType;
+    const row = precomputedSections?.[item.type.toLowerCase()]?.[precomputedIndex];
+    // The vanishingly rare case where a precomputed date happens to equal
+    // today's exact date (already claimed by todayItem above) -- treat it
+    // as missing and hunt this slot live instead of duplicating that row.
+    if (row && row.domain !== todayDomainObj.domain) {
       const rowElement = document.getElementById(item.id);
       if (rowElement) rowElement.outerHTML = createFinalDomainHTML(row, row.status, item.id);
       if (row.status === "available") toVerify.push({ item, row });

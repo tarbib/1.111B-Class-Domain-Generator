@@ -32,28 +32,53 @@ const UNKNOWN_RATIO_ABORT_THRESHOLD = 0.5;
 // which doesn't consume a row and needs a follow-up hunt() call to replace.
 const HUNT_CALLS_PER_TYPE = RESULTS_PER_SECTION * 3;
 
-// Checks every day of the current month once each, for the Date section's
-// calendar view. A month is small (<=31 days) so this is a plain full sweep,
-// not a "hunt" -- there's nothing to search for, a given day's domain is
-// fixed and we just want its current status. `year`/`month` are stamped onto
-// the output so the client can tell a stale (last month's) cache apart from
-// a fresh one instead of silently mislabeling days.
+// Every whole calendar month touched by "today through 365 days from today"
+// -- e.g. today Aug 14 2026 -> Aug 2026 .. Aug 2027, 13 months. Whole months
+// (not just the remaining days of the current one) so each is a complete,
+// independently-navigable grid for the calendar view's month nav.
+function monthsForFullYearAhead() {
+  const start = new Date();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 365);
+
+  const months = [];
+  let year = start.getFullYear();
+  let month = start.getMonth() + 1;
+  const endYear = end.getFullYear();
+  const endMonth = end.getMonth() + 1;
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    months.push({ year, month });
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return months;
+}
+
+// Checks every day of every month in that range once each, for the Date
+// section's calendar view -- lets a visitor page forward through an entire
+// year without the client ever needing to fall back to a live per-day check.
+// A given day's domain is fixed and there's nothing to search for, so this
+// is a plain full sweep rather than a "hunt".
 async function buildCalendar() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const days = [];
   let checks = 0;
   let unknown = 0;
-  for (const { day, domain } of enumerateMonthDomains(year, month)) {
-    const status = await checkDomainStatus(domain);
-    checks++;
-    if (status === "unknown") unknown++;
-    days.push({ day, domain, status });
-    process.stdout.write(`  [Calendar] ${domain}.xyz: ${status}\n`);
+  const months = [];
+  for (const { year, month } of monthsForFullYearAhead()) {
+    const days = [];
+    for (const { day, domain } of enumerateMonthDomains(year, month)) {
+      const status = await checkDomainStatus(domain);
+      checks++;
+      if (status === "unknown") unknown++;
+      days.push({ day, domain, status });
+    }
+    const availableCount = days.filter((d) => d.status === "available").length;
+    console.log(`  [Calendar] ${year}-${String(month).padStart(2, "0")}: ${availableCount}/${days.length} available`);
+    months.push({ year, month, days });
   }
-  console.log(`[Calendar] ${days.filter((d) => d.status === "available").length}/${days.length} available`);
-  return { year, month, days, checks, unknown };
+  return { months, checks, unknown };
 }
 
 async function main() {
@@ -114,7 +139,7 @@ async function main() {
     {
       generatedAt: new Date().toISOString(),
       sections,
-      calendar: { year: calendar.year, month: calendar.month, days: calendar.days },
+      calendar: { months: calendar.months },
     },
     null,
     2,
